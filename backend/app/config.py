@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
     DATABASE_URL: str = ""
     DATABASE_URL_TEST: str = ""
+    OPEN_METEO_BASE_URL: str = "https://api.open-meteo.com/v1/forecast"
+    OPEN_METEO_TIMEOUT_SECONDS: float = 10.0
+    SCHEDULER_ENABLED: bool = False
+    INGESTION_INTERVAL_MINUTES: int = 60
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
@@ -40,6 +44,18 @@ class Settings(BaseSettings):
         elif isinstance(v, list):
             return [str(item).strip() for item in v]
         return []
+
+    @field_validator("INGESTION_INTERVAL_MINUTES")
+    @classmethod
+    def validate_ingestion_interval(cls, v: int) -> int:
+        """Validates ingestion interval.
+        Configured default is 60 minutes. Adjusting the interval is an operational
+        configuration decision subject to provider rate limits. Zero or negative values
+        are strictly prohibited.
+        """
+        if v <= 0:
+            raise ValueError("INGESTION_INTERVAL_MINUTES must be a positive integer greater than 0.")
+        return v
 
 
 settings = Settings()

@@ -1,1 +1,4 @@
-"""Third-party data providers package (rainfall, river gauge, weather APIs)."""
+from app.data.providers.base import WeatherProvider
+from app.data.providers.open_meteo import OpenMeteoProvider
+
+__all__ = ["WeatherProvider", "OpenMeteoProvider"]

@@ -1,1 +1,1 @@
-"""Background tasks, cron jobs, and scheduler package."""
+"""Background scheduled jobs package for Assam Flood Guard."""

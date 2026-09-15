@@ -56,3 +56,87 @@ The following contracts will be implemented once data models and ML interfaces a
 - `GET /api/v1/predictions/live` - Current ~6-hour flood risk predictions by region
 - `GET /api/v1/observations/latest` - Latest environmental metrics (rainfall, water levels)
 - `POST /api/v1/alerts/subscribe` - Notification preferences (community/admin alerts)
+
+---
+
+## Live Data Architecture & Provider Contract (Phase 3A)
+
+### 1. Architectural Data Flow & Responsibilities
+The backend strictly owns all external weather provider communications. The machine learning layer never communicates directly with external weather APIs.
+
+```
+regions table (region_id, latitude, longitude)
+    ↓
+Open-Meteo Provider Layer (HTTP fetch in Phase 3B)
+    ↓
+Raw Provider Response JSON
+    ↓
+Normalization & Interval Alignment Layer
+    ↓
+NormalizedObservation (Pydantic Schema)
+    ↓
+observations table (Phase 2B PostgreSQL Schema)
+    ↓
+ML Feature Preparation (Phase 4)
+    ↓
+ML Inference Engine (Phase 4)
+    ↓
+predictions table (Phase 2B PostgreSQL Schema)
+```
+
+### 2. Provider Implementation Choice: Open-Meteo
+> [!NOTE]
+> Open-Meteo is an implementation choice for the SIH prototype and may later be replaced by an authoritative provider such as IMD without changing the normalized backend contract.
+
+- **Non-Commercial Prototype Usage**: Open-Meteo's free API is being used under its non-commercial usage terms.
+- **API Limits**: The free tier permits up to 10,000 API calls/day, which easily accommodates our 3 development regions ingested hourly (~72 calls/day). This is an operational characteristic of the free tier, not a commercial deployment guarantee.
+- **Authentication**: No API key is required for non-commercial prototype usage. Consequently, no `OPEN_METEO_API_KEY` is configured.
+- **Base Endpoint**: `https://api.open-meteo.com/v1/forecast`
+- **Request Parameters**:
+  - `latitude`: Geographic latitude of the region
+  - `longitude`: Geographic longitude of the region
+  - `hourly`: `temperature_2m,relative_humidity_2m,precipitation`
+  - `past_hours`: `24` (retrieves the preceding 24 hours of hourly precipitation)
+  - `timezone`: `UTC` (guarantees all timestamps are returned in UTC)
+  - `timeformat`: `iso8601` (standard ISO timestamp strings)
+
+### 3. Units & Preceding-Hour Precipitation Semantics
+- **Precipitation**: `mm` (millimeters). In Open-Meteo, hourly `precipitation` represents the total water equivalent accumulated over the **preceding 1 hour**. For example, timestamp `12:00:00Z` represents precipitation accumulated from `11:00:00Z` to `12:00:00Z`.
+- **Temperature**: `°C` (degrees Celsius at 2 meters above ground).
+- **Relative Humidity**: `%` (percentage between `0.0` and `100.0` at 2 meters above ground).
+
+### 4. Rolling Rainfall Derivation Around Completed Hourly Intervals
+The backend normalizer does not rely on negative array indexing. Instead, it enforces strict timestamp alignment around completed hourly intervals:
+1. Parse all timestamps into timezone-aware UTC `datetime` objects.
+2. Filter for **completed intervals** where `interval_timestamp <= observation_timestamp`.
+3. Sort chronologically and extract the latest 24 completed intervals.
+4. Calculate rolling accumulations:
+   - $\text{rainfall}_{1h} = \text{interval}[-1]$ (latest completed 1-hour interval)
+   - $\text{rainfall}_{3h} = \sum \text{interval}[-3:]$ (sum of latest 3 completed intervals)
+   - $\text{rainfall}_{6h} = \sum \text{interval}[-6:]$ (sum of latest 6 completed intervals)
+   - $\text{rainfall}_{24h} = \sum \text{interval}[-24:]$ (sum of latest 24 completed intervals)
+5. **Future/Uncompleted Exclusion**: Future forecast intervals (`interval_timestamp > observation_timestamp`) are strictly excluded from rolling historical calculations.
+
+### 5. Core vs. Optional Inputs
+- **Core Weather/Rainfall Inputs**:
+  - `rainfall_1h_mm`, `rainfall_3h_mm`, `rainfall_6h_mm`, `rainfall_24h_mm`
+  - All 4 are required to construct a valid observation. If fewer than 24 completed hourly intervals exist, or if any precipitation value in the required window is `None`, the normalizer raises `ProviderPartialDataError`.
+- **Optional Environmental Inputs**:
+  - `temperature_c`: Optional. If unavailable or invalid, mapped to `None`.
+  - `humidity_pct`: Optional. If unavailable or out-of-bounds, mapped to `None`.
+  - `water_level_m`: Optional. Explicitly `None` for the prototype until a dedicated hydrological station source is integrated in future phases. No fake water levels are generated.
+
+### 6. Provider Error Taxonomy
+External provider failures are caught and raised as structured domain exceptions inheriting from `WeatherProviderError`:
+- `ProviderUnavailableError`: Provider endpoint unreachable or returned HTTP 5xx.
+- `ProviderTimeoutError`: HTTP network connection or read timeout.
+- `ProviderResponseError`: Malformed JSON, non-dictionary response, or missing arrays.
+- `ProviderPartialDataError`: The provider returned a syntactically valid response, but one or more fields required to construct a usable normalized observation are missing, malformed, or unusable.
+- `ProviderNoDataError`: Empty dataset returned for the specified coordinates.
+- `ProviderRateLimitError`: HTTP 429 Too Many Requests.
+
+### 7. Freshness & Ingestion Targets
+- `is_stale`: Stored `is_stale` flags are excluded from the database. Freshness is dynamically computed by comparing `recorded_at` with current UTC time.
+- **Live Ingestion Target**: ~1 hour per region.
+- **Prediction Refresh Target**: ~3 hours per region.
+*(Note: Background schedulers like APScheduler/Celery/cron will be introduced in future phases).*
