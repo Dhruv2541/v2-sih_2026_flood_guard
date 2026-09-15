@@ -63,3 +63,7 @@ logs/
 node_modules/
 .next/
 out/
+
+#skills
+.agents/
+.claude/

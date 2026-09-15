@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     API_PREFIX: str = "/api/v1"
     DATABASE_URL: str = ""
+    DATABASE_URL_TEST: str = ""
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
