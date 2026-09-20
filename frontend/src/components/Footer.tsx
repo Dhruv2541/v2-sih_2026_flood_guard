@@ -4,13 +4,11 @@ import { Info, ShieldCheck } from 'lucide-react';
 interface FooterProps {
   onOpenMethodology: () => void;
   onOpenSafetyGuide: () => void;
-  onOpenTelemetry: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenMethodology,
   onOpenSafetyGuide,
-  onOpenTelemetry,
 }) => {
   return (
     <footer className="mt-14 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors w-full max-w-full overflow-hidden min-w-0">
@@ -65,14 +63,6 @@ export const Footer: React.FC<FooterProps> = ({
               OPERATIONAL PROTOCOL LINKS
             </div>
             <ul className="space-y-2 text-slate-600 dark:text-slate-400 font-medium">
-              <li>
-                <button
-                  onClick={onOpenTelemetry}
-                  className="hover:text-slate-900 dark:hover:text-slate-100 hover:underline transition-colors py-1 text-left min-h-[36px] flex items-center"
-                >
-                  Data Sources & Satellites
-                </button>
-              </li>
               <li>
                 <button
                   onClick={onOpenMethodology}

@@ -4,9 +4,6 @@ import {
   Navigation, 
   Search, 
   ShieldAlert, 
-  ShieldCheck, 
-  TriangleAlert, 
-  CircleAlert, 
   Clock, 
   Users, 
   Droplets, 
@@ -18,11 +15,15 @@ import {
   Compass, 
   Layers,
   ArrowRight,
+  ExternalLink,
   Sparkles,
   Waves
 } from 'lucide-react';
 import { SectorData } from '../types';
 import { ASSAM_SECTORS } from '../data/assamData';
+import { getRiskLevelConfig } from '../lib/riskLevelConfig';
+import { RiskStatusAnimation } from './RiskStatusAnimation';
+import { useCountUp } from '../hooks/useCountUp';
 
 interface RiskHeroProps {
   currentSector: SectorData | null;
@@ -93,72 +94,27 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
     }
   };
 
-  // Quick Hotspot filters
-  const hotspots = [
-    { id: 'dhemaji', label: 'Dhemaji', score: 82, level: 'HIGH' },
-    { id: 'majuli', label: 'Majuli', score: 78, level: 'HIGH' },
-    { id: 'lakhimpur', label: 'Lakhimpur', score: 58, level: 'MODERATE' },
-    { id: 'dibrugarh', label: 'Dibrugarh', score: 46, level: 'MODERATE' },
-    { id: 'barpeta', label: 'Barpeta', score: 18, level: 'LOW' },
-    { id: 'cachar', label: 'Cachar', score: 19, level: 'LOW' },
-  ];
-
-  // Risk configuration (Color + Icon + Text + Badge)
-  const isCritical = currentSector?.hazardLevel === 'CRITICAL';
-  const isHigh = currentSector?.hazardLevel === 'HIGH';
-  const isMod = currentSector?.hazardLevel === 'MODERATE';
-
-  const riskConfig = isCritical
-    ? {
-        label: 'CRITICAL FLOOD EMERGENCY',
-        badgeBg: 'bg-red-600 text-white',
-        borderClass: 'border-red-400 dark:border-red-800',
-        glowClass: 'shadow-red-500/10 dark:shadow-red-950/40',
-        accentText: 'text-red-600 dark:text-red-400',
-        cardBg: 'bg-white dark:bg-[#0E1B2F]',
-        icon: CircleAlert,
-      }
-    : isHigh
-    ? {
-        label: 'HIGH FLOOD RISK',
-        badgeBg: 'bg-red-600 text-white',
-        borderClass: 'border-red-300 dark:border-red-800/80',
-        glowClass: 'shadow-red-500/10',
-        accentText: 'text-red-600 dark:text-red-400',
-        cardBg: 'bg-white dark:bg-[#0E1B2F]',
-        icon: TriangleAlert,
-      }
-    : isMod
-    ? {
-        label: 'MODERATE FLOOD WATCH',
-        badgeBg: 'bg-amber-600 text-white',
-        borderClass: 'border-amber-300 dark:border-amber-800/80',
-        glowClass: 'shadow-amber-500/10',
-        accentText: 'text-amber-600 dark:text-amber-400',
-        cardBg: 'bg-white dark:bg-[#0E1B2F]',
-        icon: TriangleAlert,
-      }
-    : {
-        label: 'LOW FLOOD RISK',
-        badgeBg: 'bg-emerald-600 text-white',
-        borderClass: 'border-emerald-300 dark:border-emerald-800/80',
-        glowClass: 'shadow-emerald-500/10',
-        accentText: 'text-emerald-600 dark:text-emerald-400',
-        cardBg: 'bg-white dark:bg-[#0E1B2F]',
-        icon: ShieldCheck,
-      };
-
+  // Centralized risk-level visual config (color/label/status-line/animation),
+  // shared with RiskStatusAnimation. See lib/riskLevelConfig.ts.
+  const riskConfig = getRiskLevelConfig(currentSector?.hazardLevel);
+  const isCritical = riskConfig.tier === 'CRITICAL';
+  const isHigh = riskConfig.tier === 'HIGH';
   const RiskIcon = riskConfig.icon;
+
+  // Count-up transition for the primary flood-probability figure. Re-renders
+  // (not remounts) drive this, so it eases from the previously selected
+  // area's value to the newly selected one.
+  const animatedFloodProb = useCountUp(currentSector?.floodProb ?? 0, 700);
 
   return (
     <section className="pt-4 pb-2 px-3 sm:px-6 lg:px-8 max-w-[1536px] mx-auto w-full min-w-0">
-      {/* 1. Compact Location Search & Hotspot Selector */}
+      {/* 1. Compact Location Search & Official Alerts */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
         {/* Search Input Bar */}
         <div className="relative w-full lg:max-w-xl group">
           <form
             onSubmit={handleSearchSubmit}
-            className="relative flex items-center gap-2 overflow-hidden bg-white dark:bg-[#0E1B2F] border border-cyan-500/30 dark:border-cyan-400/25 rounded-xl px-3 py-2 shadow-[0_0_0_1px_rgba(14,165,233,0.06)] transition-all duration-300 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:shadow-[0_0_18px_rgba(14,165,233,0.25)] hover:shadow-[0_0_14px_rgba(14,165,233,0.15)]"
+            className="relative flex items-center gap-2 overflow-hidden bg-white dark:bg-slate-900 border border-cyan-500/30 dark:border-cyan-400/25 rounded-xl px-3 py-2 shadow-[0_0_0_1px_rgba(14,165,233,0.06)] transition-all duration-300 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:shadow-[0_0_18px_rgba(14,165,233,0.25)] hover:shadow-[0_0_14px_rgba(14,165,233,0.15)]"
           >
             {/* Water surge background layer */}
             <svg
@@ -272,35 +228,23 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
           )}
         </div>
 
-        {/* Hotspots Quick Switcher */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase font-mono mr-1">
-            HOTSPOTS:
+        <a
+          href="https://sachet.ndma.gov.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex w-full min-w-0 items-center gap-3 rounded-xl border border-sky-200/70 bg-sky-50/60 px-3 py-2 text-sky-800 transition-colors hover:border-sky-300 hover:bg-sky-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2 dark:border-sky-800/60 dark:bg-sky-950/30 dark:text-sky-200 dark:hover:border-sky-700 dark:hover:bg-sky-900/40 dark:focus-visible:ring-sky-400 dark:focus-visible:ring-offset-slate-950 lg:max-w-md"
+        >
+          <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0 text-sky-700 dark:text-sky-300" />
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold group-hover:underline underline-offset-4">
+              Official NDMA Disaster Alerts
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+              View official disaster warnings and public alerts from NDMA Sachet.
+            </span>
           </span>
-          {hotspots.slice(0, 3).map((spot) => {
-            const isSelected = currentSector?.id === spot.id;
-            return (
-              <button
-                key={spot.id}
-                onClick={() => {
-                  onSelectSector(spot.id);
-                  setQuery(spot.label);
-                }}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all duration-300 ${
-                  isSelected
-                    ? 'bg-[#0b1c30] text-white border-[#0b1c30] dark:bg-slate-100 dark:text-slate-900 dark:border-white shadow-2xs'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-cyan-400/60 hover:shadow-[0_0_10px_rgba(14,165,233,0.15)]'
-                }`}
-              >
-                <span>{spot.label}</span>
-                <span className="opacity-40 mx-1">·</span>
-                <span className={spot.level === 'HIGH' ? 'text-red-500 font-mono' : 'opacity-70 font-mono'}>
-                  {spot.score}%
-                </span>
-              </button>
-            );
-          })}
-        </div>
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
       </div>
 
       {/* Analyzing Banner (Subtle Feedback) */}
@@ -315,7 +259,7 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
 
       {/* 2. THE HERO RISK SECTION ("ONE SCREEN → ONE PRIMARY DECISION") */}
       {!currentSector ? (
-        <div className="relative rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-[#0E1B2F]/60 p-8 sm:p-10 text-center flex flex-col items-center gap-3">
+        <div className="relative rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 p-8 sm:p-10 text-center flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
             <MapPin className="w-6 h-6" />
           </div>
@@ -323,13 +267,20 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
             Select a district to view flood risk
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
-            Search for your district above, choose a hotspot, or use your current location to see live flood risk, predictions, and safety guidance.
+            Search for your district above or use your current location to see live flood risk, predictions, and safety guidance.
           </p>
         </div>
       ) : (
       <div
-        className={`relative rounded-2xl border ${riskConfig.borderClass} ${riskConfig.cardBg} p-5 sm:p-7 transition-colors`}
+        key={currentSector.id}
+        className={`relative overflow-hidden rounded-2xl border ${riskConfig.borderClass} ${riskConfig.cardBg} p-5 sm:p-7 transition-colors risk-card-enter`}
       >
+        {/* Risk-aware ambient animation layer — decorative only, sits behind
+            all real content and never affects layout (see RiskStatusAnimation). */}
+        <RiskStatusAnimation variant={riskConfig.animationVariant} />
+
+        {/* Real card content sits above the animation overlay. */}
+        <div className="relative z-10">
         {/* Top Header: Location + Status Badge */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/70 dark:border-slate-800/80">
           <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
@@ -354,9 +305,10 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
           {/* Prominent Risk State Badge (Color + Icon + Text + Badge) */}
           <div className="flex items-center gap-2 self-start sm:self-center">
             <div
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full font-heading font-extrabold text-xs sm:text-sm tracking-wider uppercase shadow-xs ${riskConfig.badgeBg}`}
+              key={currentSector.id}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full font-heading font-extrabold text-xs sm:text-sm tracking-wider uppercase shadow-xs risk-badge-entrance ${riskConfig.badgeBg}`}
             >
-              <RiskIcon className={`w-4 h-4 flex-shrink-0 ${(isCritical || isHigh) ? 'animate-pulse' : ''}`} />
+              <RiskIcon className="w-4 h-4 flex-shrink-0" />
               <span>{riskConfig.label}</span>
             </div>
           </div>
@@ -371,13 +323,16 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
             </span>
             <div className="flex items-baseline gap-3 mt-1">
               <span
-                className={`font-heading font-extrabold text-5xl sm:text-6xl leading-none tracking-tight ${riskConfig.accentText}`}
+                className={`font-heading font-extrabold text-5xl sm:text-6xl leading-none tracking-tight tabular-nums ${riskConfig.accentText}`}
               >
-                {currentSector.floodProb}%
+                {animatedFloodProb}%
               </span>
               <div className="flex flex-col">
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
                   {currentSector.statusSummary}
+                </span>
+                <span className={`text-xs font-semibold mt-0.5 ${riskConfig.accentText}`}>
+                  {riskConfig.statusLine}
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Surge: <strong className="font-mono text-red-600 dark:text-red-400">{currentSector.riverStageDelta}</strong> above danger level
@@ -411,7 +366,7 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
         {/* 3 Secondary Essential Metrics (Scannable in 1 second) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-200/70 dark:border-slate-800/80">
           {/* 1. Expected Timing */}
-          <div className="bg-slate-50 dark:bg-[#12233B] p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
+          <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
               <Clock className="w-5 h-5" />
             </div>
@@ -429,7 +384,7 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
           </div>
 
           {/* 2. People at Risk */}
-          <div className="bg-slate-50 dark:bg-[#12233B] p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
+          <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
               <Users className="w-5 h-5" />
             </div>
@@ -447,7 +402,7 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
           </div>
 
           {/* 3. Expected Water Depth */}
-          <div className="bg-slate-50 dark:bg-[#12233B] p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
+          <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
               <Droplets className="w-5 h-5" />
             </div>
@@ -518,6 +473,7 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
       )}

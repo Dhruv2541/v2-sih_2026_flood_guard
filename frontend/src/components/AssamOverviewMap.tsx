@@ -162,52 +162,124 @@ const buildMarkerElement = (hotspot: Hotspot, isDark: boolean): HTMLDivElement =
   return container;
 };
 
-/** Build popup HTML */
+/** Get risk styling configuration */
+const getRiskBadgeStyles = (level: Hotspot['riskLevel']) => {
+  switch (level) {
+    case 'CRITICAL':
+    case 'SEVERE':
+      return {
+        text: '#f87171',
+        bg: 'rgba(239, 68, 68, 0.15)',
+        border: 'rgba(239, 68, 68, 0.35)',
+        dot: '#ef4444',
+      };
+    case 'HIGH':
+      return {
+        text: '#fb923c',
+        bg: 'rgba(249, 115, 22, 0.15)',
+        border: 'rgba(249, 115, 22, 0.35)',
+        dot: '#f97316',
+      };
+    case 'MODERATE':
+      return {
+        text: '#fbbf24',
+        bg: 'rgba(245, 158, 11, 0.15)',
+        border: 'rgba(245, 158, 11, 0.35)',
+        dot: '#f59e0b',
+      };
+    case 'LOW':
+    default:
+      return {
+        text: '#34d399',
+        bg: 'rgba(16, 185, 129, 0.15)',
+        border: 'rgba(16, 185, 129, 0.35)',
+        dot: '#10b981',
+      };
+  }
+};
+
+/** Build refined popup HTML without the bulky button */
 const buildPopupContent = (hotspot: Hotspot): string => {
+  const badge = getRiskBadgeStyles(hotspot.riskLevel);
   const color = getRiskColor(hotspot.riskLevel);
+  const popStr = (hotspot.populationAtRisk / 1000).toFixed(0);
+
   return `
-    <div class="fg-map-card" style="min-width: 220px;">
-      <span class="fg-map-eyebrow" style="color: ${color};">
-        ${hotspot.riskLevel} FLOOD RISK
-      </span>
-      <strong style="font-size: 15px; color: #f4f7fb;">${hotspot.name}</strong>
-      ${hotspot.riverGauge ? `<span style="color: #8fa0b8; font-size: 11px; margin-top: 2px; display: block;">${hotspot.riverGauge}</span>` : ''}
-      
-      <div class="fg-map-stat" style="margin-top: 10px;">
-        <span>Flood probability</span>
-        <b style="color: ${color};">${hotspot.floodProb}%</b>
+    <div class="fg-map-card" style="min-width: 215px; padding: 13px 15px; cursor: pointer;" onclick="window.dispatchEvent(new CustomEvent('selectHotspot', { detail: '${hotspot.id}' }))" title="Click to view ${hotspot.name}">
+      <!-- Top Eyebrow Badge -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; padding-right: 22px;">
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 3px 8px;
+          border-radius: 9999px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: ${badge.text};
+          background: ${badge.bg};
+          border: 1px solid ${badge.border};
+        ">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: ${badge.dot}; box-shadow: 0 0 6px ${badge.dot};"></span>
+          ${hotspot.riskLevel} FLOOD RISK
+        </span>
       </div>
-      
-      <div class="fg-map-stat">
-        <span>Peak water depth</span>
-        <b style="color: #22b8f0;">${hotspot.waterDepthM.toFixed(2)} m</b>
+
+      <!-- District / Location Title -->
+      <div style="margin-bottom: 10px;">
+        <strong style="font-size: 15px; font-weight: 800; color: #f8fafc; letter-spacing: -0.01em; line-height: 1.25; display: block;">
+          ${hotspot.name}
+        </strong>
+        ${hotspot.riverGauge ? `
+          <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; color: #94a3b8;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.7; flex-shrink: 0;"><path d="M2 12h20M2 7h20M2 17h20"/></svg>
+            <span>${hotspot.riverGauge}</span>
+          </div>
+        ` : ''}
       </div>
-      
-      <div class="fg-map-stat">
-        <span>People at risk</span>
-        <b style="color: #f4f7fb;">${(hotspot.populationAtRisk / 1000).toFixed(0)}K</b>
-      </div>
-      
-      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ffffff20;">
-        <button 
-          onclick="window.dispatchEvent(new CustomEvent('selectHotspot', { detail: '${hotspot.id}' }))"
-          style="
-            width: 100%;
-            padding: 6px 12px;
-            background: #0ea5e9;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-          "
-          onmouseover="this.style.background='#0284c7'"
-          onmouseout="this.style.background='#0ea5e9'"
-        >
-          View Detailed Forecast →
-        </button>
+
+      <!-- Refined Structured Metrics -->
+      <div style="
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 10px;
+        padding: 9px 11px;
+      ">
+        <!-- Flood Probability -->
+        <div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">Flood probability</span>
+            <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13.5px; font-weight: 800; color: ${color};">
+              ${hotspot.floodProb}%
+            </span>
+          </div>
+          <div style="width: 100%; height: 3px; background: rgba(148, 163, 184, 0.18); border-radius: 9999px; margin-top: 4px; overflow: hidden;">
+            <div style="width: ${Math.min(hotspot.floodProb, 100)}%; height: 100%; background: ${color}; border-radius: 9999px;"></div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: rgba(148, 163, 184, 0.12);"></div>
+
+        <!-- Water Depth -->
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">Peak water depth</span>
+          <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; font-weight: 700; color: #38bdf8;">
+            ${hotspot.waterDepthM.toFixed(2)} m
+          </span>
+        </div>
+
+        <!-- People at Risk -->
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">People at risk</span>
+          <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; font-weight: 700; color: #f1f5f9;">
+            ${popStr}K
+          </span>
+        </div>
       </div>
     </div>
   `;
@@ -414,22 +486,22 @@ export const AssamOverviewMap: React.FC<AssamOverviewMapProps> = ({
   if (!MAPBOX_TOKEN) {
     return (
       <div
-        className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0E1B2F] flex items-center justify-center p-8 text-center"
+        className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-8 text-center"
         style={{ height }}
       >
         <div className="max-w-md space-y-4">
           <Layers3 className="mx-auto w-10 h-10 text-sky-500" />
           <div>
-            <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-[#F4F7FB] mb-2">
+            <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
               Mapbox Token Required
             </h3>
-            <p className="text-sm leading-relaxed text-slate-600 dark:text-[#8FA0B8] mb-3">
+            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 mb-3">
               To view the live Assam flood risk map, add your Mapbox access token to{' '}
               <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-sky-600 dark:text-sky-400 text-xs font-mono">
                 .env.local
               </code>
             </p>
-            <pre className="text-left text-xs rounded-lg bg-slate-100 dark:bg-[#07101F] border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-slate-700 dark:text-slate-300 overflow-x-auto">
+            <pre className="text-left text-xs rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-slate-700 dark:text-slate-300 overflow-x-auto">
               VITE_MAPBOX_ACCESS_TOKEN=pk.your_token
             </pre>
           </div>
@@ -451,7 +523,7 @@ export const AssamOverviewMap: React.FC<AssamOverviewMapProps> = ({
 
   return (
     <div
-      className="assam-overview-map relative isolate w-full min-h-[400px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-[#0E1B2F] shadow-sm"
+      className="assam-overview-map relative isolate w-full min-h-[400px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shadow-sm"
       style={{ height, contain: 'layout paint' }}
       aria-label="Assam flood risk overview map"
     >
@@ -502,7 +574,7 @@ export const AssamOverviewMap: React.FC<AssamOverviewMapProps> = ({
 
       {/* Loading state */}
       {!isMapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-[#0E1B2F] z-20">
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-900 z-20">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-3 border-slate-300 dark:border-slate-700 border-t-sky-600 dark:border-t-sky-400 rounded-full animate-spin" />
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">

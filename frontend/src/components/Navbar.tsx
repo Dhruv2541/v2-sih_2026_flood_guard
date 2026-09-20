@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-[#07101F]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
         <div className="max-w-[1536px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Brand Identity */}
           <div 
@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => handleNavClick(item.id)}
                   className={`relative px-3.5 py-2 text-xs lg:text-sm font-semibold transition-all flex items-center gap-2 rounded-lg ${
                     isActive
-                      ? 'text-[#0b1c30] dark:text-white bg-slate-100/90 dark:bg-[#12233B]'
+                      ? 'text-[#0b1c30] dark:text-white bg-slate-100/90 dark:bg-slate-800'
                       : 'text-slate-600 dark:text-slate-400 hover:text-[#0b1c30] dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >

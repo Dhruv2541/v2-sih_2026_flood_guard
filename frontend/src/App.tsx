@@ -60,7 +60,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8faff] dark:bg-[#07101F] text-[#0b1c30] dark:text-[#F4F7FB] flex flex-col font-sans selection:bg-sky-200 selection:dark:bg-sky-900 transition-colors duration-200 w-full max-w-full overflow-x-hidden min-w-0">
+    <div className="min-h-screen bg-[#f8faff] dark:bg-slate-950 text-[#0b1c30] dark:text-slate-100 flex flex-col font-sans selection:bg-sky-200 selection:dark:bg-sky-900 transition-colors duration-200 w-full max-w-full overflow-x-hidden min-w-0">
       {/* Top Authoritative Navigation Bar */}
       <Navbar
         activeTab={activeTab}
@@ -226,7 +226,6 @@ export default function App() {
       <Footer
         onOpenMethodology={() => setActiveTab('methodology')}
         onOpenSafetyGuide={() => setIsGuideOpen(true)}
-        onOpenTelemetry={() => setActiveTab('methodology')}
       />
 
       {/* Shelter Map & Relief Camp Directory Modal */}

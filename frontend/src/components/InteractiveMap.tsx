@@ -311,8 +311,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.your_public_mapbox_token') {
     return (
-      <div className="min-h-[440px] h-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0E1B2F] flex items-center justify-center p-6 text-center">
-        <div className="max-w-sm"><Layers3 className="mx-auto w-8 h-8 text-sky-500" /><h3 className="mt-4 font-heading text-lg font-bold text-slate-900 dark:text-[#F4F7FB]">Connect your Mapbox map</h3><p className="mt-2 text-sm leading-6 text-slate-500 dark:text-[#8FA0B8]">Add a public <code>VITE_MAPBOX_ACCESS_TOKEN</code> to your local environment. The new map will then load clustering, terrain, dynamic GIS layers, and hover micro-cards.</p></div>
+      <div className="min-h-[440px] h-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6 text-center">
+        <div className="max-w-sm"><Layers3 className="mx-auto w-8 h-8 text-sky-500" /><h3 className="mt-4 font-heading text-lg font-bold text-slate-900 dark:text-slate-100">Connect your Mapbox map</h3><p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Add a public <code>VITE_MAPBOX_ACCESS_TOKEN</code> to your local environment. The new map will then load clustering, terrain, dynamic GIS layers, and hover micro-cards.</p></div>
       </div>
     );
   }
