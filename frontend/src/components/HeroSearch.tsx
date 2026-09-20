@@ -151,7 +151,7 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({
       <div className="mt-5 max-w-5xl relative w-full min-w-0">
         <form
           onSubmit={handleSearchSubmit}
-          className="relative flex flex-col sm:flex-row items-stretch gap-2 sm:gap-0 bg-white dark:bg-slate-900 border border-slate-300/90 dark:border-slate-700 rounded-xl p-1.5 sm:p-2 shadow-sm hover:shadow focus-within:border-sky-600 dark:focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 transition-all w-full"
+          className="relative flex flex-col sm:flex-row items-stretch gap-2 sm:gap-0 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-1.5 sm:p-2 shadow-[0_8px_24px_rgba(15,23,42,0.08)] hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-[0_10px_28px_rgba(15,23,42,0.12)] focus-within:border-sky-500 dark:focus-within:border-sky-400 focus-within:ring-4 focus-within:ring-sky-500/10 transition-[border-color,box-shadow] duration-200 w-full"
         >
           <div className="flex items-center flex-1 px-2.5 sm:px-3 py-1 min-w-0">
             <Search className="w-5 h-5 text-slate-400 dark:text-slate-500 mr-2 flex-shrink-0" />

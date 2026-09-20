@@ -16,18 +16,19 @@ import { ImpactView } from './components/ImpactView';
 import { AlertsView } from './components/AlertsView';
 import { HistoricalView } from './components/HistoricalView';
 import { MethodologyView } from './components/MethodologyView';
+import { SelectDistrictPrompt } from './components/SelectDistrictPrompt';
 import { ASSAM_SECTORS } from './data/assamData';
 import { useGeolocation } from './hooks/useGeolocation';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [selectedSectorId, setSelectedSectorId] = useState<string>('dhemaji');
+  const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
   const [isShelterOpen, setIsShelterOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [forecastHour, setForecastHour] = useState<number>(0);
 
-  const currentSector = ASSAM_SECTORS[selectedSectorId] || ASSAM_SECTORS.dhemaji;
+  const currentSector = selectedSectorId ? ASSAM_SECTORS[selectedSectorId] ?? null : null;
 
   const handleSelectSector = (id: string) => {
     if (ASSAM_SECTORS[id]) {
@@ -101,7 +102,7 @@ export default function App() {
             )}
 
             {/* 1. EMERGENCY STATUS / ALERT STRIP (if critical) */}
-            {(currentSector.hazardLevel === 'CRITICAL' || currentSector.hazardLevel === 'HIGH') && (
+            {currentSector && (currentSector.hazardLevel === 'CRITICAL' || currentSector.hazardLevel === 'HIGH') && (
               <div className="fg-page-enter">
                 <AlertDirectiveBanner
                   sector={currentSector}
@@ -142,7 +143,7 @@ export default function App() {
 
               <AssamOverviewMap
                 onSelectHotspot={handleSelectSector}
-                selectedHotspotId={selectedSectorId}
+                selectedHotspotId={selectedSectorId ?? undefined}
                 height="clamp(400px, 55vh, 560px)"
               />
             </div>
@@ -160,30 +161,42 @@ export default function App() {
 
         {/* Tab 2: Dedicated Full GIS Risk Map View */}
         {activeTab === 'map' && (
-          <FullMapView
-            currentSector={currentSector}
-            onSelectSector={handleSelectSector}
-            onOpenDiagnostic={() => setActiveTab('predictions')}
-            onViewWeights={() => setActiveTab('predictions')}
-          />
+          currentSector ? (
+            <FullMapView
+              currentSector={currentSector}
+              onSelectSector={handleSelectSector}
+              onOpenDiagnostic={() => setActiveTab('predictions')}
+              onViewWeights={() => setActiveTab('predictions')}
+            />
+          ) : (
+            <SelectDistrictPrompt onGoToSearch={handleCheckMyRisk} />
+          )
         )}
 
         {/* Tab 3: Predictions View (Hydrograph, Hyetograph, SHAP explainability) */}
         {activeTab === 'predictions' && (
-          <PredictionsView
-            currentSector={currentSector}
-            onSelectSector={handleSelectSector}
-            onOpenDiagnostic={() => setActiveTab('predictions')}
-          />
+          currentSector ? (
+            <PredictionsView
+              currentSector={currentSector}
+              onSelectSector={handleSelectSector}
+              onOpenDiagnostic={() => setActiveTab('predictions')}
+            />
+          ) : (
+            <SelectDistrictPrompt onGoToSearch={handleCheckMyRisk} />
+          )
         )}
 
         {/* Tab 4: Impact Assessment View (Demographics, Infrastructure, Shelters) */}
         {activeTab === 'impact' && (
-          <ImpactView
-            currentSector={currentSector}
-            onSelectSector={handleSelectSector}
-            onOpenShelterModal={() => setIsShelterOpen(true)}
-          />
+          currentSector ? (
+            <ImpactView
+              currentSector={currentSector}
+              onSelectSector={handleSelectSector}
+              onOpenShelterModal={() => setIsShelterOpen(true)}
+            />
+          ) : (
+            <SelectDistrictPrompt onGoToSearch={handleCheckMyRisk} />
+          )
         )}
 
         {/* Tab 5: Alerts View (Active Public Directives & SMS Broadcast) */}
@@ -220,7 +233,7 @@ export default function App() {
       <ShelterModal
         isOpen={isShelterOpen}
         onClose={() => setIsShelterOpen(false)}
-        sector={currentSector}
+        sector={currentSector ?? ASSAM_SECTORS.dhemaji}
       />
 
       {/* Offline Bilingual Survival Guide Modal */}

@@ -105,6 +105,59 @@ button, a, input, select {
   100% { transform: scale(2.2); opacity: 0;   }
 }
 
+/* Search bar "water surge & rainfall" micro-interaction */
+@keyframes search-wave-drift-slow {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes search-wave-drift-fast {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+@keyframes search-rain-fall {
+  0%   { transform: translate(0, -120%); opacity: 0; }
+  15%  { opacity: 0.6; }
+  85%  { opacity: 0.35; }
+  100% { transform: translate(18px, 220%); opacity: 0; }
+}
+
+.search-wave-layer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 200%;
+  height: 100%;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 400ms ease-out;
+}
+.search-wave-layer-back {
+  animation: search-wave-drift-slow 7s linear infinite;
+  transform: translateY(4px);
+}
+.search-wave-layer-front {
+  animation: search-wave-drift-fast 4s linear infinite;
+  transform: translateY(6px);
+}
+.group:hover .search-wave-layer-back,
+.group:focus-within .search-wave-layer-back {
+  transform: translateY(1px);
+}
+.group:hover .search-wave-layer-front,
+.group:focus-within .search-wave-layer-front {
+  transform: translateY(2px);
+}
+
+.search-rain-streak {
+  position: absolute;
+  top: -20%;
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(to bottom, transparent, rgba(186, 230, 253, 0.9), transparent);
+  pointer-events: none;
+  animation: search-rain-fall 2.4s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 1ms !important;

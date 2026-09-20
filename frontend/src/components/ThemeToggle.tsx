@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, Monitor, Check, ChevronDown } from 'lucide-react';
+import { Sun, Moon, Check, ChevronDown } from 'lucide-react';
 import { useTheme, Theme } from '../context/ThemeContext';
 
 export const ThemeToggle: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
@@ -20,10 +20,9 @@ export const ThemeToggle: React.FC<{ compact?: boolean }> = ({ compact = false }
   const options: { id: Theme; label: string; icon: typeof Sun; hint: string }[] = [
     { id: 'light', label: 'Light', icon: Sun, hint: 'Crisp high-contrast daylight' },
     { id: 'dark', label: 'Dark', icon: Moon, hint: 'Deep slate night mode' },
-    { id: 'system', label: 'System', icon: Monitor, hint: `Auto (${resolvedTheme === 'dark' ? 'Dark' : 'Light'})` },
   ];
 
-  const currentOption = options.find(o => o.id === theme) || options[2];
+  const currentOption = options.find(o => o.id === theme) || options[0];
   const CurrentIcon = currentOption.icon;
 
   return (
