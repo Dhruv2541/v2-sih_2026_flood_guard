@@ -11,13 +11,13 @@ def test_all_circles(period_filter="today", export_csv=True, city_filter=None):
     clf_path = os.path.join("models", "best_flood_classifier.joblib")
     reg_path = os.path.join("models", "best_rainfall_regressor.joblib")
 
-    if not os.path.exists(clf_path) or not os.path.exists(reg_path):
-        print("Error: Trained model artifacts not found in models/ directory. Run 'python run_pipeline.py' first.")
+    if not os.path.exists(clf_path):
+        print("Error: Trained model artifacts not found in models/ directory. Run 'python backend/train_both_datasets.py' first.")
         return
 
     # Load Models
     clf_bundle = joblib.load(clf_path)
-    reg_bundle = joblib.load(reg_path)
+    reg_bundle = joblib.load(reg_path) if os.path.exists(reg_path) else None
 
     clf_model = clf_bundle['model']
     clf_scaler = clf_bundle['scaler']
@@ -25,10 +25,10 @@ def test_all_circles(period_filter="today", export_csv=True, city_filter=None):
     clf_features = clf_bundle['feature_names']
     optimal_thresh = clf_bundle.get('optimal_threshold', 0.70)
 
-    reg_model = reg_bundle['model']
-    reg_scaler = reg_bundle['scaler']
-    reg_imputer = reg_bundle['imputer']
-    reg_features = reg_bundle['feature_names']
+    reg_model = reg_bundle['model'] if reg_bundle else None
+    reg_scaler = reg_bundle.get('scaler') if reg_bundle else None
+    reg_imputer = reg_bundle.get('imputer') if reg_bundle else None
+    reg_features = reg_bundle.get('feature_names') if reg_bundle else []
 
     df_raw = load_master_dataset()
     df = add_engineered_features(df_raw)

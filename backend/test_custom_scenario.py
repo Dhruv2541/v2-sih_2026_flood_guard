@@ -42,18 +42,17 @@ def test_scenario(rainfall_mm: float = 120.0, multiplier: float = 2.0, use_live:
 
     df = pd.DataFrame(results)
     
-    print(f"\nResults for {len(results)} Revenue Circle(s):")
-    print("-" * 75)
-    for idx, r in df.head(10).iterrows():
-        print(f"Circle: {r['name']} ({r['district']} District)")
-        print(f"   - Rain: {r['sim_rain_mm']} mm | River Gauge: {r['sim_river_m']} m | Soil Moisture: {r['sim_soil_pct']}%")
-        print(f"   - AI Risk Class: {r['risk_label']} (Score {r['risk_score']}/3)")
-        print(f"   - Inundation Extent: {r['inundation_pct']}% of circle area")
-        print(f"   - Impact: {r['impact']['population_at_risk']:,} people at risk | {r['impact']['hospitals_affected']} hospitals endangered | {r['impact']['crop_area_damaged_ha']} ha crop damaged")
-        print(f"   - Early Warning Payload: {r['alert']}")
-        print("-" * 75)
+    print(f"\n=========================================================================================")
+    print(f" AI MODEL FLOOD PREDICTION RESULTS FOR ALL {len(results)} REVENUE CIRCLES IN ASSAM")
+    print(f"=========================================================================================")
+    print(f"{'Revenue Circle':<25} | {'District':<18} | {'Rain (mm)':<9} | {'Risk Level':<12} | {'Inundation %':<12} | {'At-Risk Pop':<12}")
+    print("-" * 97)
+    for idx, r in df.iterrows():
+        pop_risk = r['impact']['population_at_risk']
+        print(f"{r['name']:<25} | {r['district']:<18} | {r['sim_rain_mm']:>9.1f} | {r['risk_label']:<12} | {r['inundation_pct']:>11.1f}% | {pop_risk:>12,}")
+    print("=" * 97)
 
 if __name__ == "__main__":
-    # Example 1: Test with 150mm extreme rain in Guwahati / Kamrup
-    print("Test Run 1: 150mm Heavy Rainfall in Kamrup District")
-    test_scenario(rainfall_mm=150.0, multiplier=1.5, circle_name="Kamrup")
+    # Test ALL 180 Revenue Circles across Assam with 150mm heavy rain
+    print("Test Run 1: 150mm Extreme Rainfall across ALL 180 Revenue Circles of Assam")
+    test_scenario(rainfall_mm=150.0, multiplier=1.5, circle_name=None)
