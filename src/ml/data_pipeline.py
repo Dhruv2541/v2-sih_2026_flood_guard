@@ -86,8 +86,13 @@ def generate_sample_dataset():
             weather_df["soil_clay_pct"] = circle.get("soil_clay_pct", None)
             weather_df["population_density"] = circle.get("population_density", None)
             
-            # Dummy target variable: Flood occurs if rain > 50mm
-            weather_df["flood_occurred"] = (weather_df["rainfall_24h"] > 50).astype(int)
+            # EXPERIMENT ONLY: Rainfall Threshold Baseline
+            # We explicitly label this as an experiment. This is NOT ground truth.
+            weather_df["baseline_rainfall_alert"] = (weather_df["rainfall_24h"] > 50).astype(int)
+            
+            # REAL TARGET: Will be injected by src.ml.flood_report_mapper.py 
+            # For now, initialized as missing since we do not fabricate ground truth labels.
+            weather_df["flood_occurred"] = pd.NA
             
             all_data.append(weather_df)
         

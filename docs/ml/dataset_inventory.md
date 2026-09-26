@@ -1,5 +1,12 @@
 # Dataset Inventory
 
+> **CURRENT DATASET STATUS:**
+> - **Type:** Prototype / Trial only
+> - **Target:** `rainfall_24h > 50 mm` (marked as flood only when rain crossed 50mm)
+> - **Not based on real flood records** – It's based only on rainfall
+> - **Not suitable** for building a real flood prediction model
+> - **Note:** Out of 3,660 rows, only 110 are marked as "flood", and all of them were created by this rainfall rule
+
 This document tracks all datasets (historical and live) identified for the SIH FloodGuard prototype, ensuring transparency, accessibility, and reproducibility.
 
 ## Spatial Foundation
