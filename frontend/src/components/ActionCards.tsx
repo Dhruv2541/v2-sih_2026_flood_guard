@@ -17,7 +17,7 @@ export const ActionCards: React.FC<ActionCardsProps> = ({ onOpenGuideModal, onCa
           <span className="text-[11px] font-semibold tracking-[0.13em] text-sky-600 dark:text-sky-400 uppercase">Safety actions</span>
           <h2 id="actions-heading" className="mt-1 font-heading font-bold text-xl sm:text-2xl text-[#0b1c30] dark:text-slate-100 tracking-tight">What to do now</h2>
         </div>
-        <button onClick={onOpenGuideModal} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-500">
+        <button type="button" onClick={onOpenGuideModal} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300">
           Open full safety guide <ArrowRight className="w-[18px] h-[18px]" />
         </button>
       </div>

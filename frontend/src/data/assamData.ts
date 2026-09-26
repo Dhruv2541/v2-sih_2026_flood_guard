@@ -984,7 +984,7 @@ export const ASSAM_SECTORS: Record<string, SectorData> = {
     ],
     recommendedActions: ['Conditions safe. Standard monsoon surveillance.']
   }
-,
+  ,
 
   "baksa": {
     id: 'baksa',
@@ -3420,7 +3420,8 @@ export const ASSAM_SECTORS: Record<string, SectorData> = {
       'Maintain standard situational awareness.',
       'Check local weather updates daily.'
     ]
-  },};
+  },
+};
 
 export const CWC_GAUGE_STATIONS: GaugeStation[] = [
   { id: 'cwc-01', name: 'Jiadhal Gauge #04 (Dhemaji)', river: 'Jiadhal', currentStage: 104.85, dangerLevel: 103.00, highestFloodLevel: 105.10, trend: 'rising', discharge: 28400, stationCode: 'AS-CWC-04', coordinates: { lat: 27.4812, lng: 94.5822 } },

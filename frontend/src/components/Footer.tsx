@@ -24,9 +24,9 @@ export const Footer: React.FC<FooterProps> = ({
 
       {/* Main Footer Columns */}
       <div className="max-w-[1536px] mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-10 min-w-0">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs min-w-0">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 text-xs min-w-0">
           {/* Column 1: Institutional Advisory */}
-          <div className="min-w-0">
+          <div className="md:col-span-5 lg:col-span-4 min-w-0">
             <div className="flex items-center gap-2 mb-2 font-mono font-bold tracking-wider text-slate-800 dark:text-slate-200 uppercase">
               <ShieldCheck className="w-4 h-4 text-slate-600 dark:text-slate-400 flex-shrink-0" />
               <span>INSTITUTIONAL ADVISORY & MANDATE</span>
@@ -37,7 +37,7 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
 
           {/* Column 2: Emergency Response Matrix */}
-          <div className="min-w-0">
+          <div className="md:col-span-4 lg:col-span-3 min-w-0">
             <div className="font-mono font-bold tracking-wider text-slate-800 dark:text-slate-200 uppercase mb-3">
               EMERGENCY RESPONSE MATRIX
             </div>
@@ -58,7 +58,7 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
 
           {/* Column 3: Operational Protocol Links */}
-          <div className="min-w-0">
+          <div className="md:col-span-3 lg:col-span-3 min-w-0">
             <div className="font-mono font-bold tracking-wider text-slate-800 dark:text-slate-200 uppercase mb-3">
               OPERATIONAL PROTOCOL LINKS
             </div>

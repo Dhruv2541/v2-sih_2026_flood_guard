@@ -17,7 +17,7 @@ import {
 import { ACTIVE_FLOOD_ALERTS } from '../data/assamData';
 import { ThemeToggle } from './ThemeToggle';
 import { Logo } from './Logo';
-import { FloodGuardBrandText } from './FloodGuardBrandText';
+import { FloodGuardBrandReveal } from './FloodGuardBrandReveal';
 
 interface NavbarProps {
   activeTab: string;
@@ -71,16 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && handleNavClick('overview')}
           >
-            <Logo size={32} className="flex-shrink-0 sm:w-9 sm:h-9 transition-transform group-hover:scale-105" />
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5">
-                <FloodGuardBrandText />
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-600 dark:bg-sky-400 hidden sm:inline-block"></span>
-              </div>
-              <span className="text-[9px] sm:text-[10px] tracking-[0.1em] sm:tracking-[0.14em] font-bold text-slate-500 dark:text-slate-400 uppercase -mt-0.5 font-mono truncate">
-                DISASTER RISK INTELLIGENCE
-              </span>
-            </div>
+            <FloodGuardBrandReveal />
           </div>
 
           {/* Desktop Center: Clean 4-Item Primary Navigation */}
@@ -102,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'opacity-70'}`} />
                   <span>{item.label}</span>
                   {item.badge && item.badge > 0 ? (
-                    <span className="px-1.5 py-0.2 bg-red-600 text-white text-[10px] font-extrabold rounded-full animate-pulse">
+                    <span aria-label={`${item.badge} active alerts`} className="inline-flex min-h-5 min-w-5 items-center justify-center px-1.5 py-0.5 bg-red-700 text-white text-[10px] font-extrabold rounded-full animate-pulse">
                       {item.badge}
                     </span>
                   ) : null}

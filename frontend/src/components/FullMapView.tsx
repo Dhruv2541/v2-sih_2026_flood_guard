@@ -4,7 +4,7 @@ import { SectorInspector } from './SectorInspector';
 import { SectorData } from '../types';
 import { ASSAM_SECTORS } from '../data/assamData';
 import { mockRegionRiskData } from '../data/mockRiskData';
-import { Clock, Waves, Compass, Layers, MapPin, Droplets, Users, ShieldAlert, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Compass, Layers, MapPin, Droplets, Users, ShieldAlert, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface FullMapViewProps {
   currentSector: SectorData;
@@ -19,7 +19,6 @@ export const FullMapView: React.FC<FullMapViewProps> = ({
   onOpenDiagnostic,
   onViewWeights,
 }) => {
-  const [forecastHour, setForecastHour] = useState<number>(0);
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true);
   const [isLegendOpen, setIsLegendOpen] = useState<boolean>(false);
 
@@ -41,8 +40,6 @@ export const FullMapView: React.FC<FullMapViewProps> = ({
           currentSector={dynamicSector}
           onSelectSector={onSelectSector}
           onOpenDiagnostic={onOpenDiagnostic}
-          forecastHour={forecastHour}
-          onForecastHourChange={setForecastHour}
         />
       </div>
 
