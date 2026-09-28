@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Soft Cyan Outer Glow Filter -->
+    <filter id="shield-glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="14" result="blur1" />
+      <feGaussianBlur stdDeviation="6" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="contour-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Linear Gradients for 3D Beveled Shield Rim -->
+    <!-- Left Rim: Azure to Cobalt Blue Facet -->
+    <linearGradient id="rim-facet-left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00d2ff" />
+      <stop offset="25%" stop-color="#0099e6" />
+      <stop offset="65%" stop-color="#0066b3" />
+      <stop offset="100%" stop-color="#004480" />
+    </linearGradient>
+
+    <!-- Right Rim: Electric Cyan to Sky Blue Facet -->
+    <linearGradient id="rim-facet-right" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38d9ff" />
+      <stop offset="25%" stop-color="#00bfff" />
+      <stop offset="70%" stop-color="#0088cc" />
+      <stop offset="100%" stop-color="#005999" />
+    </linearGradient>
+
+    <!-- Top Bevel Chamfer Highlight -->
+    <linearGradient id="rim-top-bevel" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#b3f0ff" />
+      <stop offset="60%" stop-color="#00c3ff" />
+      <stop offset="100%" stop-color="#0077b3" />
+    </linearGradient>
+
+    <!-- Shield Interior Deep Midnight Background -->
+    <radialGradient id="interior-gradient" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#06152b" />
+      <stop offset="50%" stop-color="#030a17" />
+      <stop offset="100%" stop-color="#01040a" />
+    </radialGradient>
+
+    <!-- Flowing Wave 1 (Upper Layer: Cyan to Ocean Blue) -->
+    <linearGradient id="wave-top-grad" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#48cae4" />
+      <stop offset="40%" stop-color="#0096c7" />
+      <stop offset="100%" stop-color="#023e8a" />
+    </linearGradient>
+
+    <!-- Flowing Wave 2 (Middle Layer: Vibrant Marine Blue) -->
+    <linearGradient id="wave-mid-grad" x1="0" y1="0" x2="1" y2="0.8">
+      <stop offset="0%" stop-color="#0077b6" />
+      <stop offset="60%" stop-color="#03045e" />
+      <stop offset="100%" stop-color="#021b44" />
+    </linearGradient>
+
+    <!-- Flowing Wave 3 (Lower Layer: Deep Sapphire Current) -->
+    <linearGradient id="wave-deep-grad" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#00509d" />
+      <stop offset="50%" stop-color="#002966" />
+      <stop offset="100%" stop-color="#001433" />
+    </linearGradient>
+
+    <!-- Location Pin Inner Circle Gradient -->
+    <linearGradient id="pin-hole-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00b4d8" />
+      <stop offset="100%" stop-color="#0077b6" />
+    </linearGradient>
+  </defs>
+
+  <!-- ================= BACKGROUND AURA GLOW ================= -->
+  <!-- Ambient outer neon aura around the shield silhouette -->
+  <path d="M 256 66 L 406 132 C 426 238, 404 340, 256 450 C 108 340, 86 238, 106 132 Z"
+        fill="none"
+        stroke="#00b4d8"
+        stroke-width="22"
+        opacity="0.35"
+        filter="url(#shield-glow)" />
+
+  <!-- ================= 3D BEVELED SHIELD RIM ================= -->
+  <!-- Left Half Facet of Shield Rim -->
+  <path d="M 256 66 
+           L 106 132 
+           C 86 238, 108 340, 256 450 
+           L 256 408 
+           C 134 314, 118 230, 134 146 
+           L 256 94 Z"
+        fill="url(#rim-facet-left)" />
+
+  <!-- Right Half Facet of Shield Rim -->
+  <path d="M 256 66 
+           L 406 132 
+           C 426 238, 404 340, 256 450 
+           L 256 408 
+           C 378 314, 394 230, 378 146 
+           L 256 94 Z"
+        fill="url(#rim-facet-right)" />
+
+  <!-- Top Inner Bevel Shelf & Edge Chamfers -->
+  <path d="M 256 66 L 106 132 L 134 146 L 256 94 L 378 146 L 406 132 Z"
+        fill="url(#rim-top-bevel)"
+        opacity="0.8" />
+
+  <!-- Crisp Outer Electric Cyan Border Line -->
+  <path d="M 256 66 L 406 132 C 426 238, 404 340, 256 450 C 108 340, 86 238, 106 132 Z"
+        fill="none"
+        stroke="#48cae4"
+        stroke-width="4"
+        stroke-linejoin="round" />
+
+  <!-- Center Bevel Ridge Lines (Top & Bottom Crease) -->
+  <line x1="256" y1="66" x2="256" y2="94" stroke="#caf0f8" stroke-width="3" stroke-linecap="round" />
+  <line x1="256" y1="408" x2="256" y2="450" stroke="#0077b6" stroke-width="3" stroke-linecap="round" />
+
+  <!-- ================= SHIELD INTERIOR CAVITY ================= -->
+  <!-- Inner Shield Void Background -->
+  <path d="M 256 94 
+           L 378 146 
+           C 394 230, 378 314, 256 408 
+           C 134 314, 118 230, 134 146 Z"
+        fill="url(#interior-gradient)" />
+
+  <!-- Inner Rim Border Inset Accent -->
+  <path d="M 256 94 
+           L 378 146 
+           C 394 230, 378 314, 256 408 
+           C 134 314, 118 230, 134 146 Z"
+        fill="none"
+        stroke="#001f3f"
+        stroke-width="3"
+        opacity="0.7" />
+
+  <!-- ================= TOPOGRAPHIC ELEVATION CONTOUR ================= -->
+  <!-- Glowing Jagged Mountain / Hydrological Contour Line across the background -->
+  <!-- Base Glow Layer -->
+  <path d="M 134 228 
+           L 150 220 L 164 224 L 176 200 L 194 200 L 204 176 L 222 176 L 234 206 L 244 212 
+           L 256 232 
+           L 268 218 L 278 204 L 292 194 L 306 206 L 320 186 L 332 190 L 348 160 L 362 168 L 376 148"
+        fill="none"
+        stroke="#0077b6"
+        stroke-width="4.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#contour-glow)" />
+  <!-- Core Crisp Highlight Line -->
+  <path d="M 134 228 
+           L 150 220 L 164 224 L 176 200 L 194 200 L 204 176 L 222 176 L 234 206 L 244 212 
+           L 256 232 
+           L 268 218 L 278 204 L 292 194 L 306 206 L 320 186 L 332 190 L 348 160 L 362 168 L 376 148"
+        fill="none"
+        stroke="#00b4d8"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+
+  <!-- ================= FLOWING RIVER WAVES (3 TIERS) ================= -->
+  <!-- TIER 3: Deep Sapphire / Dark Bottom Ocean Basin Wave -->
+  <path d="M 152 304 
+           C 186 328, 220 338, 256 330 
+           C 294 322, 334 288, 368 298 
+           C 358 356, 324 394, 256 408 
+           C 188 394, 158 356, 152 304 Z"
+        fill="url(#wave-deep-grad)" />
+
+  <!-- Deep Wave Shadow Inset -->
+  <path d="M 188 360 C 220 376, 256 380, 290 366 C 278 392, 266 402, 256 408 C 246 402, 218 386, 188 360 Z"
+        fill="#00122e" />
+
+  <!-- TIER 2: Middle Azure Marine Wave (With Dynamic Right Swell & Curling Flow) -->
+  <path d="M 136 264 
+           C 174 238, 216 240, 256 270 
+           C 296 300, 338 292, 376 256 
+           C 384 282, 380 312, 366 338 
+           C 334 358, 292 364, 256 352 
+           C 214 340, 174 348, 144 316 
+           C 138 296, 136 280, 136 264 Z"
+        fill="url(#wave-mid-grad)" />
+
+  <!-- Middle Wave Light Current Ribbon Highlight -->
+  <path d="M 142 292 
+           C 176 278, 214 286, 256 314 
+           C 298 342, 336 332, 366 300 
+           C 356 332, 326 360, 256 376 
+           C 204 352, 168 322, 142 292 Z"
+        fill="url(#wave-top-grad)"
+        opacity="0.65" />
+
+  <!-- TIER 1: Upper Wave Body (Vibrant Cyan River Flow) -->
+  <path d="M 134 246 
+           C 174 218, 216 220, 256 250 
+           C 296 280, 338 274, 376 246 
+           C 380 268, 376 292, 366 312 
+           C 332 330, 294 326, 256 300 
+           C 216 274, 174 270, 140 288 
+           C 136 272, 134 258, 134 246 Z"
+        fill="url(#wave-top-grad)" />
+
+  <!-- TIER 1: Prominent Bold White Water Foam Crest (Sinusoidal River Crest) -->
+  <path d="M 134 246 
+           C 174 218, 216 220, 256 250 
+           C 296 280, 338 274, 376 246 
+           C 372 254, 366 262, 356 268 
+           C 328 286, 294 286, 256 262 
+           C 218 238, 180 236, 148 256 
+           C 142 252, 138 248, 134 246 Z"
+        fill="#ffffff" />
+
+  <!-- Lower Foam Contour Accent Line -->
+  <path d="M 148 256 
+           C 180 236, 218 238, 256 262 
+           C 294 286, 328 286, 356 268"
+        fill="none"
+        stroke="#e0f7fa"
+        stroke-width="1.5"
+        opacity="0.7" />
+
+  <!-- ================= GEOGRAPHIC LOCATION MAP PIN ================= -->
+  <!-- Soft Ambient Drop Shadow Behind Map Pin -->
+  <path d="M 256 122 
+           C 234 122, 216 140, 216 162 
+           C 216 186, 238 210, 256 234 
+           C 274 210, 296 186, 296 162 
+           C 296 140, 278 122, 256 122 Z"
+        fill="#000000"
+        opacity="0.45"
+        filter="url(#shield-glow)" />
+
+  <!-- Solid White Teardrop Location Pin Body -->
+  <path d="M 256 120 
+           C 235 120, 218 137, 218 158 
+           C 218 181, 240 206, 256 228 
+           C 272 206, 294 181, 294 158 
+           C 294 137, 277 120, 256 120 Z"
+        fill="#ffffff"
+        stroke="#f8fafc"
+        stroke-width="1.5" />
+
+  <!-- Center Circular Hole of Map Pin (Vibrant Azure-Cyan) -->
+  <circle cx="256" cy="158" r="16.5" 
+          fill="url(#pin-hole-grad)" 
+          stroke="#0077b6" 
+          stroke-width="2" />
+</svg>

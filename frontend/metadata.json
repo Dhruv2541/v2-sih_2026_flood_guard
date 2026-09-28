@@ -1,0 +1,6 @@
+{
+  "name": "FLOODGUARD - Flood Inundation & Early-Warning",
+  "description": "AI/ML Heavy Rainfall and Flood Inundation Prediction & Early-Warning Platform for SIH26071 answering Will it flood, Where, How severe, and Who and what will be affected.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

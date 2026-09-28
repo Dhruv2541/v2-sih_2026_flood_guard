@@ -1,0 +1,9 @@
+year,crop_area_affected_lakh_ha,population_affected_lakh,human_lives_lost,cattle_lost,total_damage_crore,villages_affected,districts_affected,source
+2018,0.31,13.22,53,556,2491.59,,,"NRSC/ASDMA Flood Hazard Zonation Atlas of Assam 1998-2023, Table 3.2"
+2019,2.15,73.05,101,250,3237.75,,,"NRSC/ASDMA Flood Hazard Zonation Atlas of Assam 1998-2023, Table 3.2"
+2020,1.88,57.89,150,702,2642.99,5475,30,NRSC/ASDMA Flood Hazard Zonation Atlas; MHA cumulative 2020 report
+2021,0.65,5.74,3,13,,,,"NRSC/ASDMA Flood Hazard Zonation Atlas of Assam 1998-2023, Table 3.2"
+2022,1.08,57.5,179,2700,10000,10106,35,ASDMA Assam Flood Memorandum 2022; NRSC/ASDMA Atlas Table 3.2
+2023,0.21,13.47,18,103,117.68,,,"NRSC/ASDMA Flood Hazard Zonation Atlas of Assam 1998-2023, Table 3.2"
+2024,0.4958043,42.95611,121,,,7794,35,"Government of Assam, Flood Memorandum on Assam Floods 2024, cumulative snapshot"
+2025,,11.19,36,,,3255,28,"Government of Assam, Economic Survey Assam 2025-26, Chapter VII; cites ASDMA Flood Memorandum 2025"
