@@ -1,0 +1,18 @@
+model_version: assam-flood-v2-ground-truth
+algorithm: "Gradient Boosting (Calibrated)"
+features: ["rainfall_1h", "rainfall_3h", "rainfall_6h", "rainfall_12h", "rainfall_24h", "forecast_rainfall_6h", "rainfall_3d_cumulative", "rainfall_7d_cumulative", "elevation", "distance_to_river_m", "soil_clay_pct", "population_density", "runoff_potential_index", "proximity_risk_score"]
+training_period: "2024-05-01 to 2025-03-31"
+validation_period: "2025-04-01 to 2025-05-31"
+test_period: "2025-06-01 to 2025-09-25"
+regions_count: 180
+calibration_method: "Platt Scaling (Sigmoid CalibratedClassifierCV)"
+metrics:
+  accuracy: 0.9962
+  precision: 0.3158
+  recall: 0.6818
+  f1_score: 0.4317
+  roc_auc: 0.9935
+  pr_auc: 0.5305
+  brier_score: 0.0016
+  optimal_threshold: 0.28
+label_definition_reference: docs/ml/label_definition.md

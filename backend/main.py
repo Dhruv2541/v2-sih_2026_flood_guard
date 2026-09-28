@@ -15,7 +15,9 @@ import json
 import urllib.request
 import os
 import random
-import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.ml.live_inference_adapter import get_model_adapter
 
 app = FastAPI(title="SIH26071 Assam Flood Early Warning Platform API", version="2.0.0")
 
@@ -221,64 +223,22 @@ def simulate_storm(req: SimulationRequest):
         sim_river = round(elevation * 0.4 + (sim_rain * 0.18), 2)
         sim_soil = round(min(100.0, max(15.0, item.get("soil_clay_pct", 25.0) * 1.2 + sim_rain * 0.4)), 2)
 
-        # Build feature DataFrame matching model features
-        feat_dict = {
-            "soil_clay_pct_mean": item.get("soil_clay_pct", 25.0),
-            "soil_sand_pct_mean": item.get("soil_sand_pct", 40.0),
-            "soil_silt_pct_mean": 35.0,
-            "soil_bulk_density_mean": item.get("soil_bulk_density", 1.35),
-            "soil_vwc_33kpa_mean": 0.28,
-            "soil_available_water_capacity_pct": item.get("soil_available_water_capacity_pct", 15.0),
-            "soil_sand_to_clay_ratio": item.get("soil_sand_to_clay_ratio", 1.6),
-            "terrain_elevation_mean": elevation,
-            "terrain_slope_mean": item.get("slope", 1.5),
-            "terrain_drainage_density_km_per_sqkm": item.get("drainage_density", 0.5),
-            "terrain_distance_from_river_m": item.get("distance_from_river_m", 1000.0),
-            "terrain_runoff_curve_number": item.get("curve_number", 75.0),
-            "infra_embankment_length_m": item.get("embankment_m", 500.0),
-            "runoff_potential_index": (sim_rain * (item.get("soil_clay_pct", 25.0)/100.0) * item.get("curve_number", 75.0)) / (elevation + 10.0),
-            "population_count_total": pop,
-            "population_density_mean_sqkm": item.get("population_density", 300.0),
-            "infra_hospital_count": hospitals,
-            "infra_school_count": schools,
-            "infra_emergency_service_count": item.get("emergency_services", 1),
-            "infra_shelter_count": item.get("shelters", 3),
-            "infra_total_road_length_km": item.get("total_road_km", 45.0),
-            "infra_major_road_length_km": item.get("major_road_km", 12.0),
-            "infra_road_density_km_per_sqkm": 0.3,
-            "infra_waterway_length_km": 15.0,
-            "infra_railway_length_km": 5.0,
-            "infra_osm_building_count": item.get("building_count", 3500),
-            "rainfall_mean_daily_mm": sim_rain / 30.0,
-            "rainfall_max_daily_mm": sim_rain * 0.45,
-            "rainfall_monthly_sum_mm": sim_rain,
-            "rainfall_lag1_monthly_sum_mm": sim_rain * 0.7,
-            "rainfall_3m_rolling_sum_mm": sim_rain * 2.2,
-            "river_water_level_m": sim_river,
-            "ndvi_mean": 0.45,
-            "is_monsoon_season": 1 if req.severity_multiplier >= 1.5 else 0,
-            "month": 7
+        # Model Inference via AssamFloodModel Adapter
+        adapter = get_model_adapter()
+        ml_input = {
+            "region_id": item.get("object_id"),
+            "rainfall_24h": sim_rain,
+            "elevation": elevation,
+            "distance_to_river_m": item.get("distance_from_river_m", 1000.0),
+            "soil_clay_pct": item.get("soil_clay_pct", 25.0),
+            "population_density": item.get("population_density", 300.0)
         }
-        df_feat = pd.DataFrame([feat_dict])
-
-        # Model Inferences
-        flood_occurred = 0
-        risk_score = 0
-        inundation_pct = 0.0
-        pop_affected = 0
-        crop_damaged_ha = 0.0
-
-        if sev_clf is not None:
-            try:
-                risk_score = int(sev_clf.predict(df_feat)[0])
-            except Exception:
-                risk_score = 0
-
-        if bin_clf is not None:
-            try:
-                flood_occurred = int(bin_clf.predict(df_feat)[0])
-            except Exception:
-                flood_occurred = 1 if risk_score > 0 else 0
+        
+        ml_res = adapter.predict(ml_input)
+        flood_occurred = ml_res["flood_predicted"]
+        risk_score = ml_res["risk_score"]
+        flood_prob = ml_res["flood_probability"]
+        flood_prob_pct = ml_res["flood_probability_pct"]
 
         if inund_reg is not None:
             try:

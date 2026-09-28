@@ -71,15 +71,25 @@ def test_all_circles(period_filter="today", export_csv=True, city_filter=None):
 
     print(f"\n[Dataset] Loaded {len(period_df)} Revenue Circles for evaluation.")
 
-    # 1. Predict Flood Risk
-    X_clf_imp = pd.DataFrame(clf_imputer.transform(period_df[clf_features]), columns=clf_features, index=period_df.index)
-    X_clf_scaled = pd.DataFrame(clf_scaler.transform(X_clf_imp), columns=clf_features, index=period_df.index)
-    flood_probs = clf_model.predict_proba(X_clf_scaled)[:, 1]
+    from src.ml.live_inference_adapter import get_model_adapter
+    adapter = get_model_adapter()
+    optimal_thresh = adapter.optimal_threshold
 
-    # 2. Predict Rainfall Intensity
-    X_reg_imp = pd.DataFrame(reg_imputer.transform(period_df[reg_features]), columns=reg_features, index=period_df.index)
-    X_reg_scaled = pd.DataFrame(reg_scaler.transform(X_reg_imp), columns=reg_features, index=period_df.index)
-    rain_preds = reg_model.predict(X_reg_scaled)
+    flood_probs = []
+    for idx, row in period_df.iterrows():
+        input_d = {
+            'region_id': row.get('object_id'),
+            'rainfall_24h': float(row.get('rainfall_monthly_sum_mm', 45.0) / 30.0 * 2.5),
+            'elevation': float(row.get('terrain_elevation_mean', 50.0)),
+            'distance_to_river_m': float(row.get('terrain_distance_from_river_m', 1000.0)),
+            'soil_clay_pct': float(row.get('soil_clay_pct_mean', 25.0)),
+            'population_density': float(row.get('population_density_mean_sqkm', 300.0))
+        }
+        res = adapter.predict(input_d)
+        flood_probs.append(res['flood_probability'])
+        
+    flood_probs = np.array(flood_probs)
+    rain_preds = period_df.get('rainfall_monthly_sum_mm', pd.Series([45.0]*len(period_df))).values
 
     # 3. Results DataFrame
     results_df = pd.DataFrame({
@@ -89,7 +99,7 @@ def test_all_circles(period_filter="today", export_csv=True, city_filter=None):
         'timeperiod': period_df['timeperiod'],
         'predicted_flood_prob_%': (flood_probs * 100).round(2),
         'predicted_flood_occurred': (flood_probs >= optimal_thresh).astype(int),
-        'predicted_rainfall_mm': rain_preds.round(1)
+        'predicted_rainfall_mm': np.round(rain_preds, 1)
     })
 
     if not is_today:

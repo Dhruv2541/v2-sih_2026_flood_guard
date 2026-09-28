@@ -1,0 +1,51 @@
+{
+  "model_version": "assam-flood-v2-ground-truth",
+  "algorithm": "Gradient Boosting (Calibrated)",
+  "features": [
+    "rainfall_1h",
+    "rainfall_3h",
+    "rainfall_6h",
+    "rainfall_12h",
+    "rainfall_24h",
+    "forecast_rainfall_6h",
+    "rainfall_3d_cumulative",
+    "rainfall_7d_cumulative",
+    "elevation",
+    "distance_to_river_m",
+    "soil_clay_pct",
+    "population_density",
+    "runoff_potential_index",
+    "proximity_risk_score"
+  ],
+  "metrics": {
+    "candidate_name": "Gradient Boosting (Calibrated)",
+    "accuracy": 0.9962488129154796,
+    "precision": 0.3157894736842105,
+    "recall": 0.6818181818181818,
+    "f1_score": 0.4316546762589928,
+    "roc_auc": 0.9935233328719244,
+    "pr_auc": 0.530537629538324,
+    "brier_score": 0.0015976389948479288,
+    "optimal_threshold": 0.27999999999999997,
+    "tp": 30,
+    "fp": 65,
+    "tn": 20951,
+    "fn": 14
+  },
+  "feature_importances": {
+    "rainfall_1h": 0.014319124559999204,
+    "rainfall_3h": 0.026302713297850222,
+    "rainfall_6h": 0.04935469104432864,
+    "rainfall_12h": 0.035196492163815804,
+    "rainfall_24h": 0.06405796296413835,
+    "forecast_rainfall_6h": 0.27548721662910536,
+    "rainfall_3d_cumulative": 0.10387875768311403,
+    "rainfall_7d_cumulative": 0.15701696973506787,
+    "elevation": 0.09589903620588852,
+    "distance_to_river_m": 0.03422135036898861,
+    "soil_clay_pct": 0.013106883592606745,
+    "population_density": 0.054983790496172955,
+    "runoff_potential_index": 0.034828479512329556,
+    "proximity_risk_score": 0.04134653174659427
+  }
+}

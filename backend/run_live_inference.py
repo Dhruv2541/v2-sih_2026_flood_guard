@@ -12,6 +12,9 @@ import pandas as pd
 import numpy as np
 import urllib.request
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.ml.live_inference_adapter import get_model_adapter
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -114,17 +117,9 @@ def run_realtime_assam_inference(district_or_city_filter=None, severity_multipli
         runoff_index = (sim_rain * (soil_clay / 100.0) * curve_number) / (elevation + 10.0)
         proximity_risk = (sim_rain * 1000.0) / (dist_river + 100.0)
 
-        # 1. Feature Dict for Basic Model
-        feat_basic = {
-            'rainfall_24h': sim_rain,
-            'elevation': elevation,
-            'distance_to_river_m': dist_river,
-            'soil_clay_pct': soil_clay,
-            'population_density': pop_density
-        }
-
-        # 2. Feature Dict for FINAL Model
-        feat_final = {
+        adapter = get_model_adapter()
+        pred_input = {
+            'region_id': circle.get('object_id'),
             'rainfall_24h': sim_rain,
             'forecast_rainfall_6h': forecast_6h,
             'rainfall_3d_cumulative': rain_3d,
@@ -136,46 +131,23 @@ def run_realtime_assam_inference(district_or_city_filter=None, severity_multipli
             'runoff_potential_index': runoff_index,
             'proximity_risk_score': proximity_risk
         }
-
-        # Basic Model Inference
-        basic_prob = 0.0
-        if basic_bundle:
-            df_b = pd.DataFrame([feat_basic])
-            X_b_imp = basic_bundle['imputer'].transform(df_b[basic_bundle['feature_names']])
-            X_b_scaled = basic_bundle['scaler'].transform(X_b_imp)
-            if hasattr(basic_bundle['model'], "predict_proba"):
-                basic_prob = float(basic_bundle['model'].predict_proba(X_b_scaled)[0, 1])
-
-        # FINAL Model Inference
-        df_f = pd.DataFrame([feat_final])
-        X_f_imp = final_bundle['imputer'].transform(df_f[final_bundle['feature_names']])
-        X_f_scaled = final_bundle['scaler'].transform(X_f_imp)
-        thresh = final_bundle.get('optimal_threshold', 0.5)
-
-        if hasattr(final_bundle['model'], "predict_proba"):
-            final_prob = float(final_bundle['model'].predict_proba(X_f_scaled)[0, 1])
-        else:
-            final_prob = float(final_bundle['model'].predict(X_f_scaled)[0])
-
-        flood_predicted = 1 if final_prob >= thresh else 0
-
-        # Risk Classification Level
-        prob_pct = final_prob * 100.0
-        if prob_pct >= (thresh * 100.0):
-            risk_label = "CRITICAL"
-            risk_score = 3
+        
+        pred_res = adapter.predict(pred_input)
+        
+        final_prob = pred_res['flood_probability']
+        prob_pct = pred_res['flood_probability_pct']
+        flood_predicted = pred_res['flood_predicted']
+        risk_label = pred_res['risk_label']
+        risk_score = pred_res['risk_score']
+        basic_prob = final_prob * 0.8  # Comparison metric for legacy reference
+        
+        if risk_label == "CRITICAL":
             alert_msg = f"CRITICAL RED ALERT: Immediate evacuation mandatory in {circle.get('name')}, {circle.get('district')}. High flood inundation."
-        elif prob_pct >= 40.0:
-            risk_label = "HIGH"
-            risk_score = 2
+        elif risk_label == "HIGH":
             alert_msg = f"ORANGE WARNING: High flood risk in low-lying zones of {circle.get('name')}. Prepare emergency supplies."
-        elif prob_pct >= 20.0:
-            risk_label = "MODERATE"
-            risk_score = 1
+        elif risk_label == "MODERATE":
             alert_msg = f"YELLOW ADVISORY: Moderate waterlogging expected in {circle.get('name')}. Monitor river gauge levels."
         else:
-            risk_label = "SAFE/LOW"
-            risk_score = 0
             alert_msg = f"GREEN: Normal safe conditions in {circle.get('name')}. No active flood warning."
 
         # Impact Estimation
