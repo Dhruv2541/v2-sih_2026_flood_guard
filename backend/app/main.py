@@ -8,7 +8,7 @@ from app.api.router import api_router
 from app.config import settings
 from app.jobs.scheduler import (
     create_scheduler,
-    register_ingestion_job,
+    register_live_cycle_job,
     start_scheduler,
     stop_scheduler,
 )
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.SCHEDULER_ENABLED:
         logger.info("SCHEDULER_ENABLED is True. Initializing background scheduler...")
         scheduler = create_scheduler()
-        register_ingestion_job(
+        register_live_cycle_job(
             scheduler,
             interval_minutes=settings.INGESTION_INTERVAL_MINUTES,
         )

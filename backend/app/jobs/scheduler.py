@@ -19,11 +19,11 @@ from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.jobs.ingestion_job import run_ingestion_job
+from app.jobs.ingestion_job import run_live_cycle_job
 
 logger = logging.getLogger("scheduler")
 
-INGESTION_JOB_ID = "live_weather_ingestion"
+LIVE_CYCLE_JOB_ID = "live_prediction_cycle"
 
 
 def create_scheduler() -> AsyncIOScheduler:
@@ -35,18 +35,18 @@ def create_scheduler() -> AsyncIOScheduler:
     return AsyncIOScheduler()
 
 
-def register_ingestion_job(
+def register_live_cycle_job(
     scheduler: AsyncIOScheduler,
     interval_minutes: int = 60,
     job_func: Optional[Callable] = None,
 ) -> Job:
-    """Registers the live weather data ingestion job with the scheduler.
+    """Registers the complete live prediction cycle job with the scheduler.
     
     Configuration invariants:
-    - id: 'live_weather_ingestion' (stable unique identifier)
+    - id: 'live_prediction_cycle' (stable unique identifier)
     - trigger: IntervalTrigger(minutes=interval_minutes)
       (first execution occurs after interval_minutes; not immediately on startup)
-    - max_instances: 1 (strictly prevents overlapping executions of the ingestion
+    - max_instances: 1 (strictly prevents overlapping executions of the cycle
       job WITHIN this single APScheduler instance/process; does not provide distributed
       multi-process concurrency guarantees)
     - coalesce: True (collapses missed runs into a single execution)
@@ -55,8 +55,8 @@ def register_ingestion_job(
 
     Args:
         scheduler: The AsyncIOScheduler to register with.
-        interval_minutes: Ingestion interval in minutes (must be > 0).
-        job_func: Optional job callable to execute (defaults to run_ingestion_job).
+        interval_minutes: Cycle interval in minutes (must be > 0).
+        job_func: Optional job callable to execute (defaults to run_live_cycle_job).
 
     Returns:
         Job: The registered APScheduler Job instance.
@@ -64,14 +64,14 @@ def register_ingestion_job(
     if interval_minutes <= 0:
         raise ValueError("interval_minutes must be a positive integer greater than 0.")
 
-    func = job_func or run_ingestion_job
+    func = job_func or run_live_cycle_job
     trigger = IntervalTrigger(minutes=interval_minutes)
 
     job = scheduler.add_job(
         func,
         trigger=trigger,
-        id=INGESTION_JOB_ID,
-        name="Scheduled Live Weather Ingestion",
+        id=LIVE_CYCLE_JOB_ID,
+        name="Scheduled Live Prediction Cycle",
         max_instances=1,
         coalesce=True,
         misfire_grace_time=300,
@@ -80,7 +80,7 @@ def register_ingestion_job(
     now_utc = datetime.now(timezone.utc)
     next_fire = getattr(job, "next_run_time", None) or trigger.get_next_fire_time(None, now_utc)
     logger.info(
-        f"Registered job '{INGESTION_JOB_ID}' with interval of {interval_minutes} minutes. "
+        f"Registered job '{LIVE_CYCLE_JOB_ID}' with interval of {interval_minutes} minutes. "
         f"First run scheduled at: {next_fire}."
     )
     return job
