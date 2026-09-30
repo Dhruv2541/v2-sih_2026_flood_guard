@@ -120,7 +120,8 @@ def load_resources():
             
     # 2. Load Trained AI Models
     try:
-        bin_path = os.path.join(MODELS_DIR, "flood_binary_clf.pkl")
+        bin_path_corr = os.path.join(MODELS_DIR, "flood_binary_clf_CORRECTED.pkl")
+        bin_path = bin_path_corr if os.path.exists(bin_path_corr) else os.path.join(MODELS_DIR, "flood_binary_clf.pkl")
         if os.path.exists(bin_path):
             with open(bin_path, "rb") as f:
                 bin_clf = pickle.load(f)

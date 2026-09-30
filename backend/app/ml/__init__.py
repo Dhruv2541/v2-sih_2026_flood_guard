@@ -4,6 +4,7 @@ Establishes the boundary contract between backend observation data and model inf
 """
 
 from app.ml.base import FloodPredictionModel, validate_model_output
+from app.ml.baseline_provider import BaselineProvider, BaselinePredictionError
 from app.ml.exceptions import (
     MLError,
     MLInferenceError,
@@ -20,6 +21,8 @@ __all__ = [
     "FloodPredictionModel",
     "validate_model_output",
     "prepare_prediction_input",
+    "BaselineProvider",
+    "BaselinePredictionError",
     "MLError",
     "MLInputError",
     "MLModelUnavailableError",

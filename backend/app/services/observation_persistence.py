@@ -67,7 +67,7 @@ class PersistenceResult(BaseModel):
 
 def map_to_model(normalized: NormalizedObservation) -> Observation:
     """Explicitly converts a NormalizedObservation into an Observation SQLAlchemy model.
-    
+
     Guarantees:
     - Exact field mapping without business logic
     - None optional fields remain None (SQL NULL), especially water_level_m
@@ -80,6 +80,7 @@ def map_to_model(normalized: NormalizedObservation) -> Observation:
         rainfall_1h_mm=normalized.rainfall_1h_mm,
         rainfall_3h_mm=normalized.rainfall_3h_mm,
         rainfall_6h_mm=normalized.rainfall_6h_mm,
+        rainfall_12h_mm=normalized.rainfall_12h_mm,
         rainfall_24h_mm=normalized.rainfall_24h_mm,
         water_level_m=normalized.water_level_m,
         temperature_c=normalized.temperature_c,
@@ -139,6 +140,7 @@ class ObservationPersistenceService:
             rainfall_1h_mm=observation.rainfall_1h_mm,
             rainfall_3h_mm=observation.rainfall_3h_mm,
             rainfall_6h_mm=observation.rainfall_6h_mm,
+            rainfall_12h_mm=observation.rainfall_12h_mm,
             rainfall_24h_mm=observation.rainfall_24h_mm,
             water_level_m=observation.water_level_m,
             temperature_c=observation.temperature_c,
@@ -153,6 +155,7 @@ class ObservationPersistenceService:
                 "rainfall_1h_mm": stmt.excluded.rainfall_1h_mm,
                 "rainfall_3h_mm": stmt.excluded.rainfall_3h_mm,
                 "rainfall_6h_mm": stmt.excluded.rainfall_6h_mm,
+                "rainfall_12h_mm": stmt.excluded.rainfall_12h_mm,
                 "rainfall_24h_mm": stmt.excluded.rainfall_24h_mm,
                 "water_level_m": stmt.excluded.water_level_m,
                 "temperature_c": stmt.excluded.temperature_c,

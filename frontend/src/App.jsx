@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import { ShieldAlert, Crosshair, Map as MapIcon, Database, AlertOctagon, Terminal, CheckCircle, Search, MapPin, ArrowRight } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const FEATURED_CITIES = [
   { name: 'Guwahati', district: 'Kamrup Metro' },

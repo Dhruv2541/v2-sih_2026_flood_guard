@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, Optional, Union
 
 from app.data.schemas import NormalizedObservation
@@ -67,6 +68,10 @@ def prepare_prediction_input(
             f"Missing rainfall cannot be fabricated or imputed."
         )
 
+    r_12h = getattr(observation, "rainfall_12h_mm", None)
+    if r_12h is None:
+        r_12h = Decimal("0")
+
     # Regional metadata extraction with region_id consistency check
     elevation_m = None
     if region is not None:
@@ -91,6 +96,7 @@ def prepare_prediction_input(
             rainfall_1h_mm=observation.rainfall_1h_mm,
             rainfall_3h_mm=observation.rainfall_3h_mm,
             rainfall_6h_mm=observation.rainfall_6h_mm,
+            rainfall_12h_mm=r_12h,
             rainfall_24h_mm=observation.rainfall_24h_mm,
             water_level_m=water_level_m,
             elevation_m=elevation_m,

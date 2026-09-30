@@ -10,7 +10,7 @@ export const riskService = {
   getSectorRisk: async (sectorId: string, forecastHour: number = 0): Promise<SectorData> => {
     try {
       if (!cachedSimulation) {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const res = await fetch(`${apiUrl}/api/simulate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

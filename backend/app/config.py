@@ -21,6 +21,12 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
 
+    # Prediction mode: "baseline" (demo) or "ml" (future)
+    PREDICTION_MODE: str = "baseline"
+
+    # Baseline model settings
+    BASELINE_MODEL_VERSION: str = "demo-baseline-v1"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -55,6 +61,14 @@ class Settings(BaseSettings):
         """
         if v <= 0:
             raise ValueError("INGESTION_INTERVAL_MINUTES must be a positive integer greater than 0.")
+        return v
+
+    @field_validator("PREDICTION_MODE")
+    @classmethod
+    def validate_prediction_mode(cls, v: str) -> str:
+        allowed = ["baseline", "ml"]
+        if v not in allowed:
+            raise ValueError(f"PREDICTION_MODE must be one of {allowed}")
         return v
 
 

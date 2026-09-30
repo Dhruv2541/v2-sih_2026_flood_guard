@@ -6,9 +6,9 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 class NormalizedObservation(BaseModel):
     """Provider-independent normalized representation of an environmental observation.
-    
+
     Adheres strictly to the authoritative data contract:
-    - Core rainfall inputs: rainfall_1h_mm, rainfall_3h_mm, rainfall_6h_mm, rainfall_24h_mm
+    - Core rainfall inputs: rainfall_1h_mm, rainfall_3h_mm, rainfall_6h_mm, rainfall_12h_mm, rainfall_24h_mm
     - Optional environmental inputs: temperature_c, humidity_pct, water_level_m
     - Timestamps: timezone-aware UTC
     - Completely free of provider-specific field names
@@ -24,6 +24,7 @@ class NormalizedObservation(BaseModel):
     rainfall_1h_mm: Decimal
     rainfall_3h_mm: Decimal
     rainfall_6h_mm: Decimal
+    rainfall_12h_mm: Decimal = Decimal("0")
     rainfall_24h_mm: Decimal
     water_level_m: Optional[Decimal] = None
     temperature_c: Optional[Decimal] = None
@@ -49,6 +50,7 @@ class NormalizedObservation(BaseModel):
         "rainfall_1h_mm",
         "rainfall_3h_mm",
         "rainfall_6h_mm",
+        "rainfall_12h_mm",
         "rainfall_24h_mm",
     )
     @classmethod

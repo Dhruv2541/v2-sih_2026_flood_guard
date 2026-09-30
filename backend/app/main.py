@@ -72,3 +72,12 @@ app.add_middleware(
 
 # Include Centralized API Router
 app.include_router(api_router, prefix=settings.API_PREFIX)
+
+# Include simulation & early-warning routes for frontend compatibility
+try:
+    import main as legacy_main
+    app.include_router(legacy_main.app.router)
+    logger.info("Successfully mounted simulation & early-warning routes.")
+except Exception as exc:
+    logger.warning(f"Could not mount simulation routes: {exc}")
+
