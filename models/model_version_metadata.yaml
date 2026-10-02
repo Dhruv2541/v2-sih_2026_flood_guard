@@ -12,7 +12,7 @@ metrics:
   recall: 0.6818
   f1_score: 0.4317
   roc_auc: 0.9935
-  pr_auc: 0.5305
+  pr_auc: 0.5306
   brier_score: 0.0016
   optimal_threshold: 0.28
 label_definition_reference: docs/ml/label_definition.md
