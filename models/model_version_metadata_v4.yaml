@@ -1,0 +1,61 @@
+model_version: assam_flood_v4_xgboost
+dataset_version: corrected_v3
+feature_version: v2.0
+created_at: "2026-10-02T16:42:16Z"
+created_by: ML Member 2
+
+model:
+  type: XGBoost
+  hyperparameters:
+    max_depth: 7
+    learning_rate: 0.1
+    n_estimators: 200
+    random_state: 42
+
+training:
+  period_start: 2024-05-01
+  period_end: 2025-03-31
+  total_rows: 60300
+  regions: 180/180
+  positive_samples: 268
+  negative_samples: 60032
+
+validation:
+  method: temporal + spatial GroupKFold
+  temporal_test_period: 2025-06-01 to 2025-09-25
+  spatial_folds: 5
+  mean_recall: 0.7611
+  mean_precision: 0.1977
+
+calibration:
+  applied: true
+  method: Platt Scaling
+  brier_score: 0.0015
+
+threshold:
+  selected: 0.55
+  precision: 0.4286
+  recall: 0.0682
+  reason: "Balances flood detection with acceptable false alarm rate"
+
+inference:
+  python_version: 3.13.2
+  scikit_learn_version: 1.5.1
+  xgboost_version: 3.4.1
+
+feature_count: 14
+feature_list:
+  - rainfall_1h
+  - rainfall_3h
+  - rainfall_6h
+  - rainfall_12h
+  - rainfall_24h
+  - forecast_rainfall_6h
+  - rainfall_3d_cumulative
+  - rainfall_7d_cumulative
+  - elevation
+  - distance_to_river_m
+  - soil_clay_pct
+  - population_density
+  - runoff_potential_index
+  - proximity_risk_score
