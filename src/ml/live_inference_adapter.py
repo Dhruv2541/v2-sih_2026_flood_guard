@@ -66,30 +66,41 @@ class AssamFloodModel(BaseFloodPredictionModel):
         else:
             d = dict(raw_data)
 
-        # Handle decimal / float conversion
-        def get_num(key, default=0.0):
-            val = d.get(key, default)
-            if val is None:
-                val = default
-            return float(val)
+        # Handle decimal / float conversion with alias fallbacks
+        def get_val(keys: list, default=0.0):
+            for k in keys:
+                if k in d and d[k] is not None:
+                    return float(d[k])
+            return float(default)
 
-        r24 = get_num('rainfall_24h_mm', get_num('rainfall_24h', get_num('rainfall', 0.0)))
-        r1 = get_num('rainfall_1h_mm', get_num('rainfall_1h', r24 / 24.0))
-        r3 = get_num('rainfall_3h_mm', get_num('rainfall_3h', r24 * 0.25))
-        r6 = get_num('rainfall_6h_mm', get_num('rainfall_6h', r24 * 0.45))
-        r12 = get_num('rainfall_12h_mm', get_num('rainfall_12h', r24 * 0.75))
-        fc6 = get_num('forecast_rainfall_6h', r24 * 0.35)
+        r24 = get_val(['rainfall_24h_mm', 'rainfall_24h', 'rainfall'], default=0.0)
+        r1 = get_val(['rainfall_1h_mm', 'rainfall_1h'], default=r24 / 24.0)
+        r3 = get_val(['rainfall_3h_mm', 'rainfall_3h'], default=r24 * 0.25)
+        r6 = get_val(['rainfall_6h_mm', 'rainfall_6h'], default=r24 * 0.45)
+        r12 = get_val(['rainfall_12h_mm', 'rainfall_12h'], default=r24 * 0.75)
 
-        r3d = get_num('rainfall_3d_cumulative', r24 * 2.1)
-        r7d = get_num('rainfall_7d_cumulative', r24 * 4.2)
+        # Enforce hydrological monotonic accumulation consistency (1h <= 3h <= 6h <= 12h <= 24h)
+        if r3 < r1:
+            r3 = max(r1, r24 * 0.25)
+        if r6 < r3:
+            r6 = max(r3, r24 * 0.45)
+        if r12 < r6:
+            r12 = max(r6, r24 * 0.75)
+        if r24 < r12:
+            r24 = r12
 
-        elevation = get_num('elevation_m', get_num('elevation', 50.0))
-        dist_river = get_num('distance_to_river_m', get_num('distance_from_river_m', 1000.0))
-        soil_clay = get_num('soil_clay_pct', 25.0)
-        pop_density = get_num('population_density', 300.0)
+        fc6 = get_val(['forecast_rainfall_6h'], default=r24 * 0.35)
 
-        runoff_index = get_num('runoff_potential_index', (r24 * (soil_clay / 100.0) * 75.0) / (elevation + 10.0))
-        proximity_risk = get_num('proximity_risk_score', (r24 * 1000.0) / (dist_river + 100.0))
+        r3d = get_val(['rainfall_3d_cumulative'], default=r24 * 2.1)
+        r7d = get_val(['rainfall_7d_cumulative'], default=r24 * 4.2)
+
+        elevation = get_val(['elevation_m', 'elevation'], default=50.0)
+        dist_river = get_val(['distance_to_river_m', 'distance_from_river_m'], default=1000.0)
+        soil_clay = get_val(['soil_clay_pct'], default=25.0)
+        pop_density = get_val(['population_density'], default=300.0)
+
+        runoff_index = get_val(['runoff_potential_index'], default=(r24 * (soil_clay / 100.0) * 75.0) / (elevation + 10.0))
+        proximity_risk = get_val(['proximity_risk_score'], default=(r24 * 1000.0) / (dist_river + 100.0))
 
         feat_dict = {
             'rainfall_1h': r1,
