@@ -10,7 +10,7 @@ class MLPredictionInput(BaseModel):
     Adheres strictly to the authoritative ML inference contract:
     - Canonical identifier: region_id (non-empty string)
     - Reference timestamp: timezone-aware UTC
-    - Core rainfall features: 1h, 3h, 6h, 24h accumulations (mandatory, non-negative Decimal)
+    - Core rainfall features: 1h, 3h, 6h, 12h, 24h accumulations (mandatory, non-negative Decimal)
     - Hydrological features: river gauge height water_level_m (optional, nullable)
     - Environmental/topographical features: elevation_m, temperature_c, humidity_pct (optional, nullable)
     - Missing data policy: optional fields remain explicitly None when unavailable; never fabricated.
@@ -27,6 +27,7 @@ class MLPredictionInput(BaseModel):
     rainfall_1h_mm: Decimal
     rainfall_3h_mm: Decimal
     rainfall_6h_mm: Decimal
+    rainfall_12h_mm: Decimal = Decimal("0")
     rainfall_24h_mm: Decimal
     water_level_m: Optional[Decimal] = None
     elevation_m: Optional[Decimal] = None
@@ -51,6 +52,7 @@ class MLPredictionInput(BaseModel):
         "rainfall_1h_mm",
         "rainfall_3h_mm",
         "rainfall_6h_mm",
+        "rainfall_12h_mm",
         "rainfall_24h_mm",
     )
     @classmethod
@@ -90,6 +92,7 @@ class MLPredictionOutput(BaseModel):
     forecast_valid_until: datetime
     flood_probability: Decimal
     model_version: str
+    risk_level: Optional[str] = None
 
     @field_validator("region_id")
     @classmethod

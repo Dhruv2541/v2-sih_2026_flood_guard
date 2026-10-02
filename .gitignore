@@ -1,8 +1,8 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*  # placeholder.py[cod]
+*  # placeholder$py.class
+*  # placeholder.so
 .Python
 env/
 build/
@@ -17,9 +17,9 @@ parts/
 sdist/
 var/
 wheels/
-*.egg-info/
+*  # placeholder.egg-info/
 .installed.cfg
-*.egg
+*  # placeholder.egg
 .venv
 venv/
 ENV/
@@ -29,7 +29,7 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/dist-ssr/
-*.local
+data/raw/*
 
 # Environment variables
 .env
@@ -39,4 +39,4 @@ frontend/dist-ssr/
 .vscode/
 .idea/
 .DS_Store
-*.swp
+data/processed/*

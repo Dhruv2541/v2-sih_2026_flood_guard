@@ -27,6 +27,12 @@ def get_engine() -> Optional[Engine]:
         )
         return None
 
+    # Normalize postgresql:// or postgres:// to postgresql+psycopg2:// for psycopg2 compatibility
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    elif url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+
     try:
         engine = create_engine(
             url,

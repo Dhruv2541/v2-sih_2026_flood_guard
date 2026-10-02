@@ -25,6 +25,7 @@ class Observation(Base):
         CheckConstraint("rainfall_1h_mm >= 0", name="chk_rainfall_1h_non_negative"),
         CheckConstraint("rainfall_3h_mm >= 0", name="chk_rainfall_3h_non_negative"),
         CheckConstraint("rainfall_6h_mm >= 0", name="chk_rainfall_6h_non_negative"),
+        CheckConstraint("rainfall_12h_mm >= 0", name="chk_rainfall_12h_non_negative"),
         CheckConstraint("rainfall_24h_mm >= 0", name="chk_rainfall_24h_non_negative"),
         CheckConstraint("humidity_pct BETWEEN 0.0 AND 100.0", name="chk_humidity_range"),
     )
@@ -46,6 +47,7 @@ class Observation(Base):
     rainfall_1h_mm: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
     rainfall_3h_mm: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
     rainfall_6h_mm: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
+    rainfall_12h_mm: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
     rainfall_24h_mm: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
     water_level_m: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
     temperature_c: Mapped[Optional[Decimal]] = mapped_column(Numeric(4, 1), nullable=True)

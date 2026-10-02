@@ -7,7 +7,8 @@ from decimal import Decimal
 from typing import Union, Dict, Any, List
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_MODEL_PATH = os.path.join(BASE_DIR, "models", "best_flood_classifier.joblib")
+_corrected = os.path.join(BASE_DIR, "models", "best_flood_classifier_CORRECTED.joblib")
+DEFAULT_MODEL_PATH = _corrected if os.path.exists(_corrected) else os.path.join(BASE_DIR, "models", "best_flood_classifier.joblib")
 
 # Attempt backend ML boundary contract imports
 try:

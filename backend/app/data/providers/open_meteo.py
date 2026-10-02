@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
 import logging
 from typing import Any, Dict, List, Optional
@@ -302,6 +302,7 @@ class OpenMeteoProvider(WeatherProvider):
         rainfall_1h_mm = decimal_precips[-1]
         rainfall_3h_mm = sum(decimal_precips[-3:])
         rainfall_6h_mm = sum(decimal_precips[-6:])
+        rainfall_12h_mm = sum(decimal_precips[-12:])
         rainfall_24h_mm = sum(decimal_precips)
 
         latest_interval = recent_24[-1]
@@ -330,9 +331,189 @@ class OpenMeteoProvider(WeatherProvider):
             rainfall_1h_mm=rainfall_1h_mm,
             rainfall_3h_mm=rainfall_3h_mm,
             rainfall_6h_mm=rainfall_6h_mm,
+            rainfall_12h_mm=rainfall_12h_mm,
             rainfall_24h_mm=rainfall_24h_mm,
             water_level_m=None,
             temperature_c=temp_c,
             humidity_pct=humidity_pct,
             data_source="open-meteo",
         )
+
+    async def fetch_forecast_rainfall_6h(
+        self,
+        region_id: str,
+        latitude: float,
+        longitude: float,
+        reference_time: datetime,
+    ) -> Decimal:
+        """Fetch 6-hour forecast rainfall accumulation from Open-Meteo.
+
+        Args:
+            region_id: Region identifier for error context
+            latitude: Latitude coordinate
+            longitude: Longitude coordinate
+            reference_time: Reference timestamp (UTC) - forecast covers (ref_time, ref_time + 6h]
+
+        Returns:
+            Decimal: Sum of forecast precipitation for next 6 hourly intervals
+
+        Raises:
+            ProviderPartialDataError: If insufficient forecast intervals available
+            WeatherProviderError: For other provider failures
+        """
+        # Input validation
+        if not region_id or not isinstance(region_id, str) or not region_id.strip():
+            raise ValueError("region_id must be a non-empty string.")
+        if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
+            raise ValueError("latitude and longitude must be numeric coordinates.")
+        if reference_time.tzinfo is None or reference_time.tzinfo.utcoffset(reference_time) is None:
+            raise ValueError("reference_time must be timezone-aware UTC")
+
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "hourly": "precipitation",
+            "forecast_hours": 6,
+            "timezone": "UTC",
+        }
+
+        # Perform asynchronous HTTP request
+        try:
+            if self._client is not None:
+                response = await self._client.get(
+                    self.base_url,
+                    params=params,
+                    timeout=self.timeout_seconds,
+                )
+            else:
+                async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                    response = await client.get(
+                        self.base_url,
+                        params=params,
+                    )
+        except httpx.TimeoutException as exc:
+            logger.warning(f"Timeout querying Open-Meteo forecast for region '{region_id}': {exc}")
+            raise ProviderTimeoutError(
+                f"Request to Open-Meteo forecast timed out after {self.timeout_seconds}s for region '{region_id}'.",
+                provider="open-meteo",
+            ) from exc
+        except (httpx.NetworkError, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            logger.warning(f"Network error querying Open-Meteo forecast for region '{region_id}': {exc}")
+            raise ProviderUnavailableError(
+                f"Open-Meteo forecast service is unreachable for region '{region_id}'.",
+                provider="open-meteo",
+            ) from exc
+        except httpx.HTTPError as exc:
+            logger.warning(f"HTTP communication error querying Open-Meteo forecast for region '{region_id}': {exc}")
+            raise ProviderUnavailableError(
+                f"HTTP communication failure with Open-Meteo forecast for region '{region_id}'.",
+                provider="open-meteo",
+            ) from exc
+
+        # Handle HTTP status codes
+        status_code = response.status_code
+        if status_code == 429:
+            logger.warning(f"Open-Meteo forecast rate limit reached (HTTP 429) for region '{region_id}'.")
+            raise ProviderRateLimitError(
+                f"Open-Meteo forecast rate limit exceeded for region '{region_id}'.",
+                provider="open-meteo",
+            )
+        elif 500 <= status_code < 600:
+            logger.warning(f"Open-Meteo forecast server error (HTTP {status_code}) for region '{region_id}'.")
+            raise ProviderUnavailableError(
+                f"Open-Meteo forecast returned server error {status_code} for region '{region_id}'.",
+                provider="open-meteo",
+            )
+        elif status_code != 200:
+            logger.warning(f"Open-Meteo forecast returned unexpected status {status_code} for region '{region_id}'.")
+            raise ProviderUnavailableError(
+                f"Open-Meteo forecast returned unsuccessful status {status_code} for region '{region_id}'.",
+                provider="open-meteo",
+            )
+
+        # Parse JSON response
+        try:
+            payload = response.json()
+        except Exception as exc:
+            logger.warning(f"Failed to decode JSON from Open-Meteo forecast for region '{region_id}': {exc}")
+            raise ProviderResponseError(
+                f"Failed to parse JSON response from Open-Meteo forecast for region '{region_id}'.",
+                provider="open-meteo",
+            ) from exc
+
+        if not isinstance(payload, dict):
+            raise ProviderResponseError(
+                f"Open-Meteo forecast response is not a valid JSON object for region '{region_id}'.",
+                provider="open-meteo",
+            )
+
+        if payload.get("error") is True:
+            reason = payload.get("reason", "No data available")
+            logger.warning(f"Open-Meteo forecast reported error for region '{region_id}': {reason}")
+            raise ProviderNoDataError(
+                f"No forecast data returned by Open-Meteo for region '{region_id}': {reason}",
+                provider="open-meteo",
+            )
+
+        hourly = payload.get("hourly")
+        if hourly is None or not isinstance(hourly, dict):
+            raise ProviderResponseError(
+                f"Missing 'hourly' data object in Open-Meteo forecast response for region '{region_id}'.",
+                provider="open-meteo",
+            )
+
+        times = hourly.get("time")
+        precip_list = hourly.get("precipitation")
+        if times is None or precip_list is None or len(times) == 0:
+            raise ProviderNoDataError(
+                f"No hourly forecast data available for region '{region_id}' at ({latitude}, {longitude}).",
+                provider="open-meteo",
+            )
+
+        # Parse forecast intervals (strictly future: > reference_time and <= reference_time + 6h)
+        forecast_end = reference_time + timedelta(hours=6)
+        forecast_precips: List[Decimal] = []
+
+        for i, raw_ts in enumerate(times):
+            if not isinstance(raw_ts, str):
+                raise ProviderResponseError(f"Forecast timestamp at index {i} must be a string", provider="open-meteo")
+
+            try:
+                dt = datetime.fromisoformat(raw_ts)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    dt = dt.astimezone(timezone.utc)
+            except Exception as e:
+                raise ProviderResponseError(f"Malformed forecast timestamp '{raw_ts}': {e}", provider="open-meteo")
+
+            # Forecast interval rule: strictly future and within 6h window
+            if reference_time < dt <= forecast_end:
+                p_val = precip_list[i]
+                if p_val is None:
+                    raise ProviderPartialDataError(
+                        f"Forecast precipitation value is missing (null) for interval ending at {dt.isoformat()}",
+                        provider="open-meteo",
+                    )
+                try:
+                    dec = Decimal(str(p_val))
+                    if dec < Decimal("0"):
+                        raise ProviderPartialDataError(
+                            f"Forecast precipitation value is negative ({dec}) at {dt.isoformat()}",
+                            provider="open-meteo",
+                        )
+                    forecast_precips.append(dec)
+                except (InvalidOperation, ValueError):
+                    raise ProviderPartialDataError(
+                        f"Forecast precipitation value '{p_val}' could not be parsed as Decimal at {dt.isoformat()}",
+                        provider="open-meteo",
+                    )
+
+        # Require at least 1 forecast interval (ideally 6)
+        if len(forecast_precips) == 0:
+            raise ProviderPartialDataError(
+                f"No valid forecast intervals in 6-hour window for region '{region_id}'",
+                provider="open-meteo",
+            )
+
+        return sum(forecast_precips)
