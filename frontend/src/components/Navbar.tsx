@@ -69,11 +69,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     (a) => a.riskLevel === 'CRITICAL' || a.riskLevel === 'HIGH'
   ).length;
 
+
   // 4 Primary Core Navigation Items (Simple, Icon-Driven)
   const primaryNavItems = [
     { id: 'overview', label: 'Home', icon: Home },
     { id: 'map', label: 'Risk Map', icon: Map },
-    { id: 'alerts', label: 'Alerts', icon: Bell, badge: criticalAlertCount },
+    { id: 'alerts', label: 'Alerts', icon: Bell },
     { id: 'historical', label: 'History', icon: History },
   ];
 
@@ -95,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-slate-950/40 backdrop-blur-md dark:backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/5 shadow-sm dark:shadow-[0_4px_30px_rgba(0,0,0,0.1)] transition-colors">
         <div className="max-w-[1536px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Brand Identity */}
           <div 
@@ -224,7 +225,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Notification Flyout */}
               {isAlertDrawerOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-24px))] bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-24px))] bg-white dark:bg-slate-900/60 dark:backdrop-blur-2xl rounded-xl shadow-xl border border-slate-200 dark:border-white/10 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                   id="notification-flyout"
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -288,7 +289,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onCheckMyRisk}
               id="nav-check-risk-btn"
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 min-h-[44px] rounded-lg bg-[#0b1c30] dark:bg-sky-600 hover:bg-[#152840] dark:hover:bg-sky-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-xs hover:shadow whitespace-nowrap cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 min-h-[44px] rounded-lg bg-[#0b1c30] dark:bg-sky-600 hover:bg-[#152840] dark:hover:bg-sky-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-xs hover:shadow whitespace-nowrap cursor-pointer dark:border dark:border-sky-400/25 dark:shadow-[0_0_12px_rgba(2,132,199,0.25)]"
             >
               <span className="w-2 h-2 rounded-full bg-sky-400 dark:bg-white animate-pulse flex-shrink-0"></span>
               <span>Check My Risk</span>
@@ -337,11 +338,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Slide-Over Menu Drawer */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-50 md:hidden bg-slate-950/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 md:hidden bg-slate-950/40 backdrop-blur-md dark:bg-[#02050a]/60 dark:backdrop-blur-xl flex justify-end animate-in fade-in duration-150"
           onClick={() => setIsMobileMenuOpen(false)}
         >
           <div 
-            className="w-[85%] max-w-sm bg-white dark:bg-slate-900 h-full shadow-2xl p-5 flex flex-col justify-between overflow-y-auto"
+            className="w-[85%] max-w-sm bg-white dark:bg-slate-950/80 dark:backdrop-blur-3xl border-l border-white/5 h-full shadow-2xl p-5 flex flex-col justify-between overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div>

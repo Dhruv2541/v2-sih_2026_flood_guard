@@ -77,7 +77,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8faff] dark:bg-slate-950 text-[#0b1c30] dark:text-slate-100 flex flex-col font-sans selection:bg-sky-200 selection:dark:bg-sky-900 transition-colors duration-200 w-full max-w-full overflow-x-hidden min-w-0">
+    <div className="min-h-screen bg-[#f8faff] dark:bg-slate-950 dark:bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-slate-950 dark:to-[#02040a] text-[#0b1c30] dark:text-slate-100 flex flex-col font-sans selection:bg-sky-200 selection:dark:bg-sky-900 transition-colors duration-200 w-full max-w-full overflow-x-hidden min-w-0">
       {/* Top Authoritative Navigation Bar */}
       <Navbar
         activeTab={activeTab}

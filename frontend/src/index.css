@@ -76,52 +76,58 @@ body,
 }
 
 :root {
-  /* Calm emergency-operations-center dark palette. These tokens back the
-     always-dark map/popup chrome below and are re-declared inside .dark
-     (scoped to Tailwind's slate/sky scales) so every dark:* utility class
-     across the app resolves to the same values instead of ad-hoc hexes. */
-  --fg-bg: #0b1220;
-  --fg-surface: #111c2e;
-  --fg-surface-raised: #18263a;
+  --fg-bg: #070d18;
+  --fg-surface: #0e1726;
+  --fg-surface-raised: #162338;
   --fg-popover: #1c2c42;
   --fg-primary: #38bdf8;
-  --fg-text: #e7eef8;
-  --fg-muted: #9aaac0;
-  --fg-border: rgb(148 163 184 / 0.16);
-  --fg-border-strong: rgb(148 163 184 / 0.28);
+  --fg-text: #f8fafc;
+  --fg-muted: #94a3b8;
+  --fg-border: rgb(148 163 184 / 0.14);
+  --fg-border-strong: rgb(148 163 184 / 0.25);
 }
 
-/* Dark mode design tokens.
-   Redeclaring Tailwind's slate/sky scales here means every existing
-   `dark:bg-slate-900`, `dark:text-slate-400`, `dark:border-sky-800`, etc.
-   utility across the app resolves to this single calm, stepped-elevation
-   palette instead of a mix of arbitrary navy/slate/sky hexes. Light mode
-   (the :root defaults for these tokens, defined by Tailwind itself) is
-   untouched. */
+/* Calibrated Dark Mode Design System
+   Elevates FLOODGUARD with an oceanic midnight navy elevation hierarchy
+   and WCAG AA compliant text contrast for high-stress emergency response. */
 .dark {
-  --color-slate-50: #eef3fa;
-  --color-slate-100: #e7eef8;
-  --color-slate-200: #cdd9e8;
-  --color-slate-300: #b1c0d4;
-  --color-slate-400: #9aaac0;
-  --color-slate-500: #7386a0;
-  --color-slate-600: #4c5f7a;
-  --color-slate-700: #2c3e56;
-  --color-slate-800: #18263a;
-  --color-slate-900: #111c2e;
-  --color-slate-950: #0b1220;
+  --text-primary: #f8fafc;      /* pure snow - primary headings & key data */
+  --text-secondary: #e2e8f0;    /* crisp cool slate - secondary body */
+  --text-muted: #94a3b8;        /* neutral silver slate - captions & metadata (>5:1 contrast) */
+  --text-faint: #64748b;        /* muted slate - low-priority hints */
+  --text-accent: #38bdf8;       /* refined cyber sky */
+  --text-accent-alt: #7dd3fc;   /* soft sky accent */
+  --text-inverse: #070d18;
+  --text-link: #38bdf8;
+  --text-danger: #f87171;       /* red-400 */
+  --text-success: #34d399;      /* emerald-400 */
+  --text-warning: #fbbf24;      /* amber-400 */
 
-  --color-sky-50: #eafaff;
-  --color-sky-100: #d3f0fd;
-  --color-sky-200: #a9e2fb;
-  --color-sky-300: #7dd3f2;
+  /* Surface Elevation Scale (Oceanic Navy Hierarchy) */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #22344d;   /* borders / subtle dividers */
+  --color-slate-800: #162338;   /* elevated surfaces / hover cards / pills */
+  --color-slate-900: #0e1726;   /* standard card container surface */
+  --color-slate-950: #070d18;   /* base canvas dark background */
+
+  /* Calibrated Brand Sky Scale */
+  --color-sky-50: #f0f9ff;
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
   --color-sky-400: #38bdf8;
-  --color-sky-500: #1ea8de;
-  --color-sky-600: #0d8fc4;
-  --color-sky-700: #0d719c;
-  --color-sky-800: #123f57;
-  --color-sky-900: #12293a;
-  --color-sky-950: #0e1e2c;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;     /* primary action blue without harsh glare */
+  --color-sky-700: #0369a1;
+  --color-sky-800: #075985;
+  --color-sky-900: #0c4a6e;
+  --color-sky-950: #082f49;
 }
 
 html {

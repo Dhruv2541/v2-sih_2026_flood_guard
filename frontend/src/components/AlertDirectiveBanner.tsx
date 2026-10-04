@@ -28,16 +28,16 @@ export const AlertDirectiveBanner: React.FC<AlertDirectiveBannerProps> = ({
     >
       <div
         role="alert"
-        className={`rounded-2xl border p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0 ${
+        className={`rounded-2xl border p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0 transition-all ${
           isEmergency
-            ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/60'
-            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60'
+            ? 'bg-red-50 border-red-200 dark:bg-slate-900 dark:border-slate-700/80 dark:border-l-4 dark:border-l-red-500 dark:shadow-[0_4px_24px_rgba(239,68,68,0.15)]'
+            : 'bg-amber-50 border-amber-200 dark:bg-slate-900 dark:border-slate-700/80 dark:border-l-4 dark:border-l-amber-500 dark:shadow-[0_4px_24px_rgba(245,158,11,0.15)]'
         }`}
       >
         <div className="flex items-start gap-3.5 min-w-0">
           <div
-            className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${
-              isEmergency ? 'bg-red-700' : 'bg-amber-700'
+            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-sm ${
+              isEmergency ? 'bg-red-600 dark:bg-red-600' : 'bg-amber-600 dark:bg-amber-600'
             }`}
           >
             <Icon aria-hidden="true" className="w-5 h-5" />
@@ -46,7 +46,7 @@ export const AlertDirectiveBanner: React.FC<AlertDirectiveBannerProps> = ({
           <div className="space-y-1 min-w-0">
             <h2
               className={`font-heading font-extrabold text-base sm:text-lg leading-snug break-words ${
-                isEmergency ? 'text-red-900 dark:text-red-200' : 'text-amber-950 dark:text-amber-200'
+                isEmergency ? 'text-red-900 dark:text-red-400' : 'text-amber-950 dark:text-amber-400'
               }`}
             >
               {isEmergency
