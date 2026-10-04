@@ -33,26 +33,56 @@ def load_circles() -> List[Dict]:
 
 def fetch_open_meteo_archive(lat: float, lon: float, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
     """
-    Fetch REAL historical daily rainfall from Open-Meteo Archive API.
+    Fetch REAL historical hourly rainfall from Open-Meteo Archive API.
+    Computes exact trailing sums for 1h, 3h, 6h, 12h, 24h windows valid at 00:00 UTC daily.
     
-    Returns DataFrame with columns: timestamp (date), rainfall_24h (mm)
+    Returns DataFrame with columns: 
+    timestamp (date), rainfall_1h, rainfall_3h, rainfall_6h, rainfall_12h, rainfall_24h (mm)
     """
+    # Fetch an extra day before start_date so we have 24h history for the first day
+    extended_start = (pd.to_datetime(start_date) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    
     url = (
         f"https://archive-api.open-meteo.com/v1/archive?"
         f"latitude={lat}&longitude={lon}&"
-        f"start_date={start_date}&end_date={end_date}&"
-        f"daily=precipitation_sum&timezone=UTC"
+        f"start_date={extended_start}&end_date={end_date}&"
+        f"hourly=precipitation&timezone=UTC"
     )
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'FloodGuard-SIH26'})
         with urllib.request.urlopen(req, timeout=30) as response:
             data = json.loads(response.read().decode())
-        if "daily" in data and "time" in data["daily"] and "precipitation_sum" in data["daily"]:
-            df = pd.DataFrame({
-                "timestamp": pd.to_datetime(data["daily"]["time"]),
-                "rainfall_24h": data["daily"]["precipitation_sum"]
+            
+        if "hourly" in data and "time" in data["hourly"] and "precipitation" in data["hourly"]:
+            hourly_df = pd.DataFrame({
+                "time": pd.to_datetime(data["hourly"]["time"]),
+                "precip": data["hourly"]["precipitation"]
             })
-            return df
+            hourly_df['precip'] = hourly_df['precip'].fillna(0)
+            
+            # Set time as index
+            hourly_df = hourly_df.set_index("time")
+            
+            # Calculate trailing sums (causal: closed='right')
+            hourly_df['rainfall_1h'] = hourly_df['precip'].rolling(window=1, min_periods=1).sum()
+            hourly_df['rainfall_3h'] = hourly_df['precip'].rolling(window=3, min_periods=1).sum()
+            hourly_df['rainfall_6h'] = hourly_df['precip'].rolling(window=6, min_periods=1).sum()
+            hourly_df['rainfall_12h'] = hourly_df['precip'].rolling(window=12, min_periods=1).sum()
+            hourly_df['rainfall_24h'] = hourly_df['precip'].rolling(window=24, min_periods=1).sum()
+            
+            # We want the values at 00:00 UTC for each day (representing the 24 hours prior)
+            daily_df = hourly_df[hourly_df.index.hour == 0].copy()
+            daily_df = daily_df.reset_index()
+            daily_df.rename(columns={"time": "timestamp"}, inplace=True)
+            
+            # Filter back to requested date range
+            daily_df['timestamp'] = pd.to_datetime(daily_df['timestamp'].dt.date)
+            daily_df = daily_df[(daily_df['timestamp'] >= start_date) & (daily_df['timestamp'] <= end_date)]
+            
+            # Drop the raw hourly precip column
+            daily_df.drop(columns=["precip"], inplace=True)
+            
+            return daily_df
     except Exception as e:
         print(f"  [ERROR] Archive fetch failed for ({lat}, {lon}): {e}")
     return None

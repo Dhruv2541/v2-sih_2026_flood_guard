@@ -40,16 +40,25 @@ class AssamFloodModel(FloodPredictionModel):
         """Converts backend input dict into model-ready feature vector."""
         d = dict(raw_data)
         
-        # Extract rainfall parameters
-        r24 = float(d.get('rainfall_24h', d.get('rainfall', 0.0)))
-        r1 = float(d.get('rainfall_1h', r24 / 24.0))
-        r3 = float(d.get('rainfall_3h', r24 * 0.25))
-        r6 = float(d.get('rainfall_6h', r24 * 0.45))
-        r12 = float(d.get('rainfall_12h', r24 * 0.75))
-        fc6 = float(d.get('forecast_rainfall_6h', r24 * 0.35))
+        # Extract rainfall parameters - STRICT CONTRACT ENFORCEMENT
+        # Approximations are no longer allowed. Backend must provide real aggregations.
+        r24 = float(d.get('rainfall_24h', 0.0))
         
-        r3d = float(d.get('rainfall_3d_cumulative', r24 * 2.1))
-        r7d = float(d.get('rainfall_7d_cumulative', r24 * 4.2))
+        try:
+            r1 = float(d['rainfall_1h'])
+            r3 = float(d['rainfall_3h'])
+            r6 = float(d['rainfall_6h'])
+            r12 = float(d['rainfall_12h'])
+        except KeyError as e:
+            raise KeyError(f"Feature parity violation: Backend MUST provide true sub-daily rainfall: {e}")
+            
+        fc6 = float(d.get('forecast_rainfall_6h', 0.0)) # TIGGE proxy pending
+        
+        try:
+            r3d = float(d['rainfall_3d_cumulative'])
+            r7d = float(d['rainfall_7d_cumulative'])
+        except KeyError as e:
+            raise KeyError(f"Feature parity violation: Backend MUST provide true cumulative rainfall: {e}")
         
         # Static terrain features
         elevation = float(d.get('elevation', d.get('elevation_m', 50.0)))

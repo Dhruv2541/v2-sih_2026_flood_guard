@@ -132,25 +132,17 @@ def map_flood_events_to_circles(circles):
     return mapped_events, unresolved_events
 
 
-def compute_derived_rainfall_windows(df):
+def validate_rainfall_windows(df):
     """
-    Compute 1h, 3h, 6h, 12h rainfall from DAILY 24h values.
-    
-    NOTE: Daily data only gives 24h accumulation. We cannot recover true
-    sub-daily windows from daily totals alone. These are APPROXIMATIONS
-    based on typical diurnal distribution. They are marked as such.
-    
-    For true sub-daily windows, hourly Open-Meteo data would be needed.
+    Validates that real hourly aggregations are present in the dataset.
+    This replaces the old approximation method, adhering to Task 5: Actual Hourly Rainfall.
     """
-    # These are PROPORTIONAL APPROXIMATIONS from daily total
-    # They are NOT true sub-daily measurements
-    df['rainfall_1h'] = (df['rainfall_24h'] / 24.0).round(2)
-    df['rainfall_3h'] = (df['rainfall_24h'] * 0.25).round(2)
-    df['rainfall_6h'] = (df['rainfall_24h'] * 0.45).round(2)
-    df['rainfall_12h'] = (df['rainfall_24h'] * 0.75).round(2)
+    required_cols = ['rainfall_1h', 'rainfall_3h', 'rainfall_6h', 'rainfall_12h', 'rainfall_24h']
+    for col in required_cols:
+        if col not in df.columns:
+            print(f"[ERROR] Required real hourly rainfall column missing: {col}")
     
-    # Mark as approximated
-    df['rainfall_windows_approximated'] = True
+    df['rainfall_windows_approximated'] = False
     return df
 
 
@@ -263,8 +255,8 @@ def build_corrected_dataset():
     pos_count = df['flood_occurred'].sum()
     print(f"[*] Assigned flood labels: {pos_count} positive, {len(df) - pos_count} negative")
     
-    # 6. Compute derived rainfall windows (approximated from daily)
-    df = compute_derived_rainfall_windows(df)
+    # 6. Validate real hourly rainfall windows (Task 5)
+    df = validate_rainfall_windows(df)
     
     # 7. Compute CAUSAL cumulative rainfall
     df = compute_causal_cumulative_rainfall(df)

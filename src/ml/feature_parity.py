@@ -92,15 +92,24 @@ def compute_proximity_risk_score(
 
 def compute_rainfall_windows_from_24h(rainfall_24h: Decimal) -> Dict[str, Decimal]:
     """
-    Compute sub-daily rainfall windows from 24h total.
+    [DEPRECATED] Compute sub-daily rainfall windows from 24h total.
     
-    NOTE: These are PROPORTIONAL APPROXIMATIONS from daily totals.
-    True sub-daily measurements require hourly data.
+    WARNING: This approximation violates the Feature Parity golden rule now that
+    ML training uses real hourly data (Task 5).
     
-    This exact function is used in:
-    - Training: build_corrected_dataset.py
-    - Inference: backend/app/services/derived_features.py (or equivalent)
+    ACTION REQUIRED: Backend MUST fetch real hourly precipitation for live inference
+    and pass `rainfall_1h`, `rainfall_3h`, `rainfall_6h`, `rainfall_12h` directly,
+    just as it does for `rainfall_24h`.
+    
+    Do NOT use this function. It remains only to avoid immediate crashes in old backend code.
     """
+    import warnings
+    warnings.warn(
+        "compute_rainfall_windows_from_24h is DEPRECATED. "
+        "Backend must supply real hourly rainfall to match ML training data.",
+        DeprecationWarning
+    )
+    
     r24 = float(rainfall_24h)
     
     return {
