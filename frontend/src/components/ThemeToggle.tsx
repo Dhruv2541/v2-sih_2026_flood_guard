@@ -31,7 +31,7 @@ export const ThemeToggle: React.FC<{ compact?: boolean }> = ({ compact = false }
       <button
         onClick={() => setIsOpen(!isOpen)}
         id="theme-toggle-btn"
-        className="flex items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 rounded-lg text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 transition-all text-xs font-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs shadow-xs touch-manipulation"
+        className="flex items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-2 min-w-[44px] min-h-[44px] rounded-lg text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 transition-all text-xs font-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs shadow-xs touch-manipulation cursor-pointer"
         title={`Theme: ${currentOption.label} (${resolvedTheme})`}
         aria-label="Toggle display theme"
         aria-expanded={isOpen}

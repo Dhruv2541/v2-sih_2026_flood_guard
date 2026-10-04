@@ -1,3 +1,25 @@
+/**
+ * ============================================================================
+ * FloodGuard Development Mock Datasets (Retained for Offline UI Development)
+ * ============================================================================
+ *
+ * CAUTION: DEVELOPMENT MOCKS ONLY.
+ *
+ * This dataset contains local development mock models for Assam sectors,
+ * CWC hydrometric gauge stations, ASDMA relief camps, alerts, and historical data.
+ *
+ * ARCHITECTURAL CONSTRAINTS:
+ * 1. NEVER present these values as actual live flood predictions.
+ * 2. NEVER silently use mock data when a real backend API fails.
+ * 3. Future Production Flow:
+ *       Component ──▶ API Layer (src/api) ──▶ FastAPI Backend
+ * 4. Temporary Development Flow:
+ *       Component ──▶ Mock Adapter (src/mocks/adapter) ──▶ Isolated Mocks (src/mocks)
+ *
+ * DO NOT DELETE this file yet; existing legacy views reference it until their
+ * scheduled Phase 4/5 API migration.
+ */
+
 import { SectorData, ReliefCamp, GaugeStation, FloodAlert, HistoricalYearRecord, ModelMetric, DataSourceItem, InfrastructureItem } from '../types';
 
 export const ASSAM_SECTORS: Record<string, SectorData> = {
@@ -984,7 +1006,7 @@ export const ASSAM_SECTORS: Record<string, SectorData> = {
     ],
     recommendedActions: ['Conditions safe. Standard monsoon surveillance.']
   }
-  ,
+,
 
   "baksa": {
     id: 'baksa',
@@ -3420,8 +3442,7 @@ export const ASSAM_SECTORS: Record<string, SectorData> = {
       'Maintain standard situational awareness.',
       'Check local weather updates daily.'
     ]
-  },
-};
+  },};
 
 export const CWC_GAUGE_STATIONS: GaugeStation[] = [
   { id: 'cwc-01', name: 'Jiadhal Gauge #04 (Dhemaji)', river: 'Jiadhal', currentStage: 104.85, dangerLevel: 103.00, highestFloodLevel: 105.10, trend: 'rising', discharge: 28400, stationCode: 'AS-CWC-04', coordinates: { lat: 27.4812, lng: 94.5822 } },

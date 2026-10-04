@@ -39,7 +39,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
 
           <button
             onClick={onClose}
-            className="w-9 h-9 sm:w-8 sm:h-8 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors flex-shrink-0"
+            className="min-w-[44px] min-h-[44px] p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -53,7 +53,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
             <button
               key={l}
               onClick={() => setLang(l)}
-              className={`px-3 py-1.5 min-h-[36px] text-xs font-semibold rounded transition-colors ${
+              className={`px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-lg transition-colors flex items-center justify-center cursor-pointer ${
                 lang === l
                   ? 'bg-slate-900 dark:bg-sky-600 text-white'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'

@@ -20,9 +20,7 @@ export const SectorInspector: React.FC<SectorInspectorProps> = ({
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
   const isUrgent = sector.hazardLevel === 'CRITICAL' || sector.hazardLevel === 'HIGH';
-  // Use the darker light-mode shades for large score text. The former 400
-  // shades did not meet the 3:1 large-text contrast requirement on white.
-  const accent = isUrgent ? 'text-red-700 dark:text-red-400' : sector.hazardLevel === 'MODERATE' ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400';
+  const accent = isUrgent ? 'text-red-400' : sector.hazardLevel === 'MODERATE' ? 'text-amber-400' : 'text-emerald-400';
   const indicator = isUrgent ? 'bg-red-500' : sector.hazardLevel === 'MODERATE' ? 'bg-amber-400' : 'bg-emerald-400';
   const factors = sector.factors || [];
 
@@ -40,7 +38,7 @@ export const SectorInspector: React.FC<SectorInspectorProps> = ({
         </div>
         <div className="text-right">
           <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">Risk score</span>
-          <span className={`font-heading text-4xl font-bold tracking-tight ${accent}`}>{sector.vulnerabilityIndex}<span className="text-base text-slate-600 dark:text-slate-400">/100</span></span>
+          <span className={`font-heading text-4xl font-bold tracking-tight ${accent}`}>{sector.vulnerabilityIndex}<span className="text-base text-slate-400 dark:text-slate-500">/100</span></span>
         </div>
       </div>
 
@@ -64,7 +62,7 @@ export const SectorInspector: React.FC<SectorInspectorProps> = ({
               <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{factor.observedValue}</p>
             </div>
           ))}
-          <button type="button" onClick={onViewWeights} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300">View model details <ChevronRight className="w-4 h-4" /></button>
+          <button onClick={onViewWeights} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-500">View model details <ChevronRight className="w-4 h-4" /></button>
         </div>
       )}
 

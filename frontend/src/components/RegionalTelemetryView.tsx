@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Radio, Search, ArrowUpRight, ArrowDownRight, Minus, Filter, Download } from 'lucide-react';
 import { CWC_GAUGE_STATIONS } from '../data/assamData';
 import { GaugeStation } from '../types';
+import { DataStateBoundary, SkeletonCard, EmptyState, DataState } from './data-state';
 
 interface RegionalTelemetryViewProps {
   onSelectStation?: (stationName: string) => void;
@@ -24,6 +25,8 @@ export const RegionalTelemetryView: React.FC<RegionalTelemetryViewProps> = () =>
     if (statusFilter === 'normal') return matchesSearch && !isOverDanger && !isNearDanger;
     return matchesSearch;
   });
+
+  const dataState: DataState = filteredStations.length === 0 ? 'EMPTY' : 'SUCCESS';
 
   return (
     <div className="w-full max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-8 animate-in fade-in duration-200 min-w-0">
@@ -72,11 +75,10 @@ export const RegionalTelemetryView: React.FC<RegionalTelemetryViewProps> = () =>
             <button
               key={filter}
               onClick={() => setStatusFilter(filter)}
-              className={`px-3 py-1.5 min-h-[36px] rounded text-xs font-semibold capitalize transition-colors whitespace-nowrap flex-shrink-0 ${
-                statusFilter === filter
+              className={`px-3 py-1.5 min-h-[36px] rounded text-xs font-semibold capitalize transition-colors whitespace-nowrap flex-shrink-0 ${statusFilter === filter
                   ? 'bg-slate-900 dark:bg-sky-600 text-white'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
+                }`}
             >
               {filter}
             </button>
@@ -84,96 +86,134 @@ export const RegionalTelemetryView: React.FC<RegionalTelemetryViewProps> = () =>
         </div>
       </div>
 
-      {/* Telemetry Table */}
-      <div className="mt-6 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-800 overflow-hidden shadow-sm transition-colors min-w-0">
-        <div className="overflow-x-auto max-w-full touch-pan-x scrollbar-none">
-          <table className="w-full text-left text-xs font-medium border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-mono text-[11px] uppercase tracking-wider">
-                <th className="py-3 px-4">Station Name</th>
-                <th className="py-3 px-4">River Trunk</th>
-                <th className="py-3 px-4">Current Stage (m)</th>
-                <th className="py-3 px-4">Danger Level (m)</th>
-                <th className="py-3 px-4">Delta</th>
-                <th className="py-3 px-4">Discharge (m³/s)</th>
-                <th className="py-3 px-4">Trend (3h)</th>
-                <th className="py-3 px-4">Hazard State</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredStations.map((stn) => {
-                const delta = Number((stn.currentStage - stn.dangerLevel).toFixed(2));
-                const isOverDanger = delta >= 0;
-                const isWarning = !isOverDanger && delta >= -1.0;
-
-                return (
-                  <tr key={stn.id} className="hover:bg-sky-50/40 dark:hover:bg-slate-800/60 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100 font-sans">
-                      {stn.name}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 font-mono">{stn.river}</td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
-                      {stn.currentStage.toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-400">
-                      {stn.dangerLevel.toFixed(2)}
-                    </td>
-                    <td
-                      className={`py-3.5 px-4 font-mono font-bold ${
-                        isOverDanger
-                          ? 'text-red-600 dark:text-red-400'
-                          : isWarning
-                          ? 'text-amber-600 dark:text-amber-400'
-                          : 'text-emerald-600 dark:text-emerald-400'
-                      }`}
-                    >
-                      {delta >= 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-700 dark:text-slate-300">
-                      {(stn.discharge ?? 0).toLocaleString()} m³/s
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {stn.trend === 'rising' && (
-                        <span className="inline-flex items-center gap-1 text-red-700 dark:text-red-400 font-semibold font-mono">
-                          <ArrowUpRight className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                          <span>Rising</span>
-                        </span>
-                      )}
-                      {stn.trend === 'falling' && (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold font-mono">
-                          <ArrowDownRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>Falling</span>
-                        </span>
-                      )}
-                      {stn.trend === 'steady' && (
-                        <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 font-semibold font-mono">
-                          <Minus className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Steady</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {isOverDanger ? (
-                        <span className="px-2 py-0.5 rounded bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900 font-bold font-mono text-[10px] uppercase">
-                          CRITICAL INUNDATION
-                        </span>
-                      ) : isWarning ? (
-                        <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900 font-bold font-mono text-[10px] uppercase">
-                          WARNING WATCH
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 font-bold font-mono text-[10px] uppercase">
-                          NORMAL FLOW
-                        </span>
-                      )}
-                    </td>
+      {/* Telemetry Table & Data State Handling */}
+      <DataStateBoundary
+        state={dataState}
+        loadingComponent={
+          <div className="mt-6 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-800 overflow-hidden shadow-sm" aria-busy="true">
+            <div className="overflow-x-auto max-w-full">
+              <table className="w-full text-left text-xs font-medium border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-mono text-[11px] uppercase tracking-wider">
+                    <th className="py-3 px-4">Station Name</th>
+                    <th className="py-3 px-4">River Trunk</th>
+                    <th className="py-3 px-4">Current Stage (m)</th>
+                    <th className="py-3 px-4">Danger Level (m)</th>
+                    <th className="py-3 px-4">Delta</th>
+                    <th className="py-3 px-4">Discharge (m³/s)</th>
+                    <th className="py-3 px-4">Trend (3h)</th>
+                    <th className="py-3 px-4">Hazard State</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <SkeletonCard variant="table-row" count={8} />
+              </table>
+            </div>
+          </div>
+        }
+        emptyComponent={
+          <div className="mt-6">
+            <EmptyState
+              title="No prediction data available."
+              description={searchTerm || statusFilter !== 'all' 
+                ? "No hydrometric stations match the current search filters." 
+                : "No telemetry stations available in this river basin."}
+              actionLabel={searchTerm || statusFilter !== 'all' ? 'Reset Filters' : undefined}
+              onAction={searchTerm || statusFilter !== 'all' ? () => { setSearchTerm(''); setStatusFilter('all'); } : undefined}
+            />
+          </div>
+        }
+        errorTitle="Unable to load flood data."
+        backendUnavailableTitle="FloodGuard backend is currently unavailable."
+      >
+        <div className="mt-6 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-800 overflow-hidden shadow-sm transition-colors min-w-0">
+          <div className="overflow-x-auto max-w-full touch-pan-x scrollbar-none">
+            <table className="w-full text-left text-xs font-medium border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-mono text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4">Station Name</th>
+                  <th className="py-3 px-4">River Trunk</th>
+                  <th className="py-3 px-4">Current Stage (m)</th>
+                  <th className="py-3 px-4">Danger Level (m)</th>
+                  <th className="py-3 px-4">Delta</th>
+                  <th className="py-3 px-4">Discharge (m³/s)</th>
+                  <th className="py-3 px-4">Trend (3h)</th>
+                  <th className="py-3 px-4">Hazard State</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredStations.map((stn) => {
+                  const delta = Number((stn.currentStage - stn.dangerLevel).toFixed(2));
+                  const isOverDanger = delta >= 0;
+                  const isWarning = !isOverDanger && delta >= -1.0;
+
+                  return (
+                    <tr key={stn.id} className="hover:bg-sky-50/40 dark:hover:bg-slate-800/60 transition-colors">
+                      <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100 font-sans">
+                        {stn.name}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 font-mono">{stn.river}</td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
+                        {stn.currentStage.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-400">
+                        {stn.dangerLevel.toFixed(2)}
+                      </td>
+                      <td
+                        className={`py-3.5 px-4 font-mono font-bold ${isOverDanger
+                            ? 'text-red-600 dark:text-red-400'
+                            : isWarning
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
+                          }`}
+                      >
+                        {delta >= 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-slate-700 dark:text-slate-300">
+                        {(stn.discharge ?? 0).toLocaleString()} m³/s
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {stn.trend === 'rising' && (
+                          <span className="inline-flex items-center gap-1 text-red-700 dark:text-red-400 font-semibold font-mono">
+                            <ArrowUpRight className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                            <span>Rising</span>
+                          </span>
+                        )}
+                        {stn.trend === 'falling' && (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold font-mono">
+                            <ArrowDownRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>Falling</span>
+                          </span>
+                        )}
+                        {stn.trend === 'steady' && (
+                          <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 font-semibold font-mono">
+                            <Minus className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Steady</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {isOverDanger ? (
+                          <span className="px-2 py-0.5 rounded bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900 font-bold font-mono text-[10px] uppercase">
+                            CRITICAL INUNDATION
+                          </span>
+                        ) : isWarning ? (
+                          <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900 font-bold font-mono text-[10px] uppercase">
+                            WARNING WATCH
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 font-bold font-mono text-[10px] uppercase">
+                            NORMAL FLOW
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </DataStateBoundary>
     </div>
   );
 };

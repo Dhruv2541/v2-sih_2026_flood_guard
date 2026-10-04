@@ -1,6 +1,9 @@
 import { SectorData } from '../types';
 import { ASSAM_SECTORS } from '../data/assamData';
-let cachedSimulation: any[] | null = null;
+import { simulateFlood, SimulationDistrictResult } from '../api/simulation';
+import { isApiConfigured } from '../api/client';
+
+let cachedSimulation: SimulationDistrictResult[] | null = null;
 
 export const riskService = {
   getAllSectors: (): Record<string, SectorData> => {
@@ -9,33 +12,27 @@ export const riskService = {
 
   getSectorRisk: async (sectorId: string, forecastHour: number = 0): Promise<SectorData> => {
     try {
-      if (!cachedSimulation) {
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/simulate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ severity_multiplier: 1.0, use_live_weather: true })
-        });
-        const data = await res.json();
+      if (!cachedSimulation && isApiConfigured()) {
+        const data = await simulateFlood({ severity_multiplier: 1.0, use_live_weather: true });
         cachedSimulation = data.simulation || [];
       }
     } catch (e) {
-      console.warn("Backend ML API unreachable, using local mock data", e);
+      console.warn("Backend ML API unreachable, using isolated fallback mock data", e);
     }
 
     const baseSector = { ...(ASSAM_SECTORS[sectorId] || ASSAM_SECTORS['dhemaji']) };
-    
+
     // Inject Live Backend ML Data if available
     if (cachedSimulation) {
-      const backendData = cachedSimulation.find(s => 
-        s.name.toLowerCase() === baseSector.district.toLowerCase() || 
+      const backendData = cachedSimulation.find(s =>
+        s.name.toLowerCase() === baseSector.district.toLowerCase() ||
         s.name.toLowerCase() === sectorId.toLowerCase()
       );
       if (backendData) {
         // Map backend 0-3 risk score to frontend 0-100 index
         const mappedScore = backendData.risk_score === 3 ? 95 : backendData.risk_score === 2 ? 75 : backendData.risk_score === 1 ? 45 : 15;
         const mappedLevel = backendData.risk_score === 3 ? 'CRITICAL' : backendData.risk_score === 2 ? 'HIGH' : backendData.risk_score === 1 ? 'MODERATE' : 'LOW';
-        
+
         baseSector.vulnerabilityIndex = mappedScore;
         baseSector.hazardLevel = mappedLevel as any;
         baseSector.inundationAreaKm2 = backendData.inundation_pct || baseSector.inundationAreaKm2;

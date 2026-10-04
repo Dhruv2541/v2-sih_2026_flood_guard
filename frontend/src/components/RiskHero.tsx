@@ -1,28 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  MapPin, 
-  Navigation, 
-  Search, 
-  ShieldAlert, 
-  Clock, 
-  Users, 
-  Droplets, 
-  ChevronDown, 
-  ChevronUp, 
-  Activity, 
-  Map, 
-  HelpCircle, 
-  Compass, 
-  Layers,
-  ArrowRight,
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import {
+  Check,
+  X,
+  MapPin,
+  Navigation,
+  Search,
+  ShieldAlert,
+  Clock,
+  Users,
+  Droplets,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  Map,
   ExternalLink,
-  Sparkles,
-  Waves
+  ClipboardList,
+  Loader2
 } from 'lucide-react';
 import { SectorData } from '../types';
 import { ASSAM_SECTORS } from '../data/assamData';
 import { getRiskLevelConfig } from '../lib/riskLevelConfig';
 import { RiskStatusAnimation } from './RiskStatusAnimation';
+import { DataFreshness } from './DataFreshness';
 import { useCountUp } from '../hooks/useCountUp';
 
 interface RiskHeroProps {
@@ -48,57 +47,151 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
 }) => {
   const [query, setQuery] = useState(currentSector?.district ?? '');
   const [showDropdown, setShowDropdown] = useState(false);
+  // Index of the keyboard/hover-highlighted option in the listbox (-1 = none).
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [showDetails, setShowDetails] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const listboxId = 'flood-risk-search-listbox';
+  const optionId = (index: number) => `flood-risk-search-option-${index}`;
+
+  // Shortcut hint label: ⌘K on Apple platforms, Ctrl K elsewhere.
+  const isApplePlatform =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
 
   useEffect(() => {
     setQuery(currentSector?.district ?? '');
   }, [currentSector?.id, currentSector?.district]);
 
-  // Close dropdown on outside click
+  const closeDropdown = () => {
+    setShowDropdown(false);
+    setActiveIndex(-1);
+  };
+
+  // Close dropdown on outside click (anything outside the whole search area)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
-      ) {
-        setShowDropdown(false);
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        closeDropdown();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter sectors for search
-  const filteredSectors = Object.values(ASSAM_SECTORS).filter((s) => {
+  // Global shortcut: Ctrl+K / ⌘K anywhere, or "/" when not already typing.
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTyping =
+        !!target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable);
+
+      const isModK = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+      const isSlash = event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping;
+
+      if (isModK || isSlash) {
+        event.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        setShowDropdown(true);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Filter sectors for search (memoized to avoid recalculation on unrelated renders)
+  const filteredSectors = useMemo(() => {
     const q = query.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      s.district.toLowerCase().includes(q) ||
-      s.stationName.toLowerCase().includes(q) ||
-      s.riverName.toLowerCase().includes(q) ||
-      s.affectedNeighborhoods.some((n) => n.toLowerCase().includes(q))
-    );
-  });
+    return Object.values(ASSAM_SECTORS).filter((s) => {
+      if (!q) return true;
+      return (
+        s.district.toLowerCase().includes(q) ||
+        s.stationName.toLowerCase().includes(q) ||
+        s.riverName.toLowerCase().includes(q) ||
+        s.affectedNeighborhoods.some((n) => n.toLowerCase().includes(q))
+      );
+    });
+  }, [query]);
+
+  const selectSector = (sector: SectorData) => {
+    onSelectSector(sector.id);
+    setQuery(sector.district);
+    closeDropdown();
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const match = filteredSectors[0];
-    if (match) {
-      onSelectSector(match.id);
-      setQuery(match.district);
-      setShowDropdown(false);
+    // Prefer the highlighted option; otherwise fall back to the best match.
+    const match = filteredSectors[activeIndex] ?? filteredSectors[0];
+    if (match) selectSector(match);
+  };
+
+  const handleClear = () => {
+    setQuery('');
+    setActiveIndex(-1);
+    setShowDropdown(true);
+    inputRef.current?.focus();
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const count = filteredSectors.length;
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault();
+        if (!count) return;
+        if (!showDropdown) {
+          setShowDropdown(true);
+          const currentIdx = filteredSectors.findIndex((s) => s.id === currentSector?.id);
+          setActiveIndex(currentIdx >= 0 ? currentIdx : 0);
+        } else {
+          setActiveIndex((i) => (i + 1) % count);
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        e.preventDefault();
+        if (!count) return;
+        if (!showDropdown) {
+          setShowDropdown(true);
+          setActiveIndex(count - 1);
+        } else {
+          setActiveIndex((i) => (i <= 0 ? count - 1 : i - 1));
+        }
+        break;
+      }
+      case 'Escape': {
+        if (showDropdown) {
+          e.preventDefault();
+          closeDropdown();
+        } else if (query) {
+          // Second Escape clears the field (WAI-ARIA combobox pattern).
+          e.preventDefault();
+          setQuery('');
+        }
+        break;
+      }
+      case 'Tab':
+        closeDropdown();
+        break;
+      // Enter is handled by the form's onSubmit, which honours activeIndex.
     }
   };
+
+  // Keep the highlighted option visible while arrowing through a long list.
+  useEffect(() => {
+    if (activeIndex < 0) return;
+    document.getElementById(optionId(activeIndex))?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex]);
 
   // Centralized risk-level visual config (color/label/status-line/animation),
   // shared with RiskStatusAnimation. See lib/riskLevelConfig.ts.
   const riskConfig = getRiskLevelConfig(currentSector?.hazardLevel);
-  const isCritical = riskConfig.tier === 'CRITICAL';
-  const isHigh = riskConfig.tier === 'HIGH';
   const RiskIcon = riskConfig.icon;
 
   // Count-up transition for the primary flood-probability figure. Re-renders
@@ -106,124 +199,190 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
   // area's value to the newly selected one.
   const animatedFloodProb = useCountUp(currentSector?.floodProb ?? 0, 700);
 
+  // WHAT SHOULD I DO: lead with the first concrete recommendation for this area.
+  const primaryAction = currentSector?.recommendedActions?.[0];
+
+  const focusRing =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2 dark:focus-visible:ring-sky-400 dark:focus-visible:ring-offset-slate-950';
+
   return (
     <section className="pt-4 pb-2 px-3 sm:px-6 lg:px-8 max-w-[1536px] mx-auto w-full min-w-0">
-      {/* 1. Compact Location Search & Official Alerts */}
+      {/* 1. Location search + official alerts link */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
         {/* Search Input Bar */}
-        <div className="relative w-full lg:max-w-xl group">
+        <div ref={searchContainerRef} className="relative w-full lg:max-w-xl">
           <form
             onSubmit={handleSearchSubmit}
-            className="relative flex items-center gap-2 overflow-hidden bg-white dark:bg-slate-900 border border-cyan-500/30 dark:border-cyan-400/25 rounded-xl px-3 py-2 shadow-[0_0_0_1px_rgba(14,165,233,0.06)] transition-all duration-300 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:shadow-[0_0_18px_rgba(14,165,233,0.25)] hover:shadow-[0_0_14px_rgba(14,165,233,0.15)]"
+            role="search"
+            className="group flex items-center gap-2.5 h-12 pl-3.5 pr-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-slate-400 dark:hover:border-slate-600 focus-within:border-sky-600 dark:focus-within:border-sky-500 focus-within:shadow-[0_0_0_3px_rgba(2,132,199,0.15),0_4px_12px_-2px_rgba(15,23,42,0.08)] dark:focus-within:shadow-[0_0_0_3px_rgba(56,189,248,0.2),0_4px_12px_-2px_rgba(0,0,0,0.4)]"
           >
-            {/* Water surge background layer */}
-            <svg
-              className="search-wave-layer search-wave-layer-back"
-              viewBox="0 0 200 40"
-              preserveAspectRatio="none"
+            <Search
               aria-hidden="true"
-            >
-              <path
-                d="M0 24 Q 12.5 14, 25 24 T 50 24 T 75 24 T 100 24 T 125 24 T 150 24 T 175 24 T 200 24 V40 H0 Z"
-                fill="#0284c7"
-                opacity="0.2"
-              />
-            </svg>
-            <svg
-              className="search-wave-layer search-wave-layer-front"
-              viewBox="0 0 200 40"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M0 27 Q 10 19, 20 27 T 40 27 T 60 27 T 80 27 T 100 27 T 120 27 T 140 27 T 160 27 T 180 27 T 200 27 V40 H0 Z"
-                fill="#0ea5e9"
-                opacity="0.15"
-              />
-            </svg>
-
-            {/* Raindrop micro-accents */}
-            <span className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-              <span className="search-rain-streak" style={{ left: '10%', animationDelay: '0s' }} />
-              <span className="search-rain-streak" style={{ left: '28%', animationDelay: '0.5s' }} />
-              <span className="search-rain-streak" style={{ left: '46%', animationDelay: '1s' }} />
-              <span className="search-rain-streak" style={{ left: '64%', animationDelay: '1.6s' }} />
-              <span className="search-rain-streak" style={{ left: '82%', animationDelay: '0.9s' }} />
-              <span className="search-rain-streak" style={{ left: '94%', animationDelay: '1.3s' }} />
-            </span>
-
-            <Search className="relative z-10 w-4 h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+              className="w-[18px] h-[18px] text-slate-500 dark:text-slate-400 group-focus-within:text-sky-700 dark:group-focus-within:text-sky-400 flex-shrink-0 transition-colors"
+            />
             <input
               ref={inputRef}
               id="flood-risk-search-input"
               type="text"
+              role="combobox"
+              aria-label="Search district, river, or town"
+              aria-expanded={showDropdown}
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              aria-activedescendant={showDropdown && activeIndex >= 0 ? optionId(activeIndex) : undefined}
+              aria-keyshortcuts="Control+K Meta+K /"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
+                setActiveIndex(-1);
                 setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
-              placeholder="Select a district, village, or town..."
-              className="relative z-10 w-full text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm font-medium focus:outline-none bg-transparent py-1"
+              onKeyDown={handleInputKeyDown}
+              placeholder="Search district, river, or town"
+              autoComplete="off"
+              spellCheck={false}
+              className="flex-1 min-w-0 h-full bg-transparent text-[15px] font-medium text-slate-900 dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400 placeholder:font-normal focus:outline-none"
             />
+
+            {query && (
+              <button
+                type="button"
+                onClick={handleClear}
+                aria-label="Clear search"
+                title="Clear search"
+                className={`flex items-center justify-center w-7 h-7 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0 ${focusRing}`}
+              >
+                <X aria-hidden="true" className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Shortcut hint: hidden while the field is focused (it's already active) */}
+            <kbd
+              aria-hidden="true"
+              className="hidden md:inline-flex group-focus-within:hidden items-center gap-0.5 h-6 px-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex-shrink-0 select-none"
+            >
+              {isApplePlatform ? '⌘' : 'Ctrl'}
+              <span className="ml-0.5">K</span>
+            </kbd>
+
+            <span aria-hidden="true" className="h-6 w-px bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
             <button
               type="button"
-              onClick={onUseLocation}
+              onClick={() => {
+                closeDropdown();
+                onUseLocation();
+              }}
               disabled={locationLoading}
-              title="Use GPS Coordinates"
-              className="relative z-10 flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/60 border border-sky-200 dark:border-sky-800/80 transition-all duration-300 flex-shrink-0"
+              aria-label={locationLoading ? 'Locating your position' : 'Use my current location'}
+              title="Use my current location"
+              className={`flex items-center gap-1.5 min-h-11 px-3.5 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 hover:text-sky-800 dark:hover:bg-slate-800 dark:hover:text-sky-300 transition-colors flex-shrink-0 disabled:opacity-60 disabled:cursor-wait cursor-pointer ${focusRing}`}
             >
-              <Navigation className={`w-3 h-3 ${locationLoading ? 'animate-spin text-sky-600' : ''}`} />
-              <span className="hidden sm:inline">Use Location</span>
+              {locationLoading ? (
+                <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />
+              ) : (
+                <Navigation aria-hidden="true" className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">{locationLoading ? 'Locating…' : 'Use location'}</span>
             </button>
           </form>
 
+          {/* Announce result count to screen readers as the user types */}
+          <div className="sr-only" role="status" aria-live="polite">
+            {showDropdown
+              ? filteredSectors.length === 0
+                ? 'No matching districts.'
+                : `${filteredSectors.length} district${filteredSectors.length === 1 ? '' : 's'} available. Use up and down arrows to navigate.`
+              : ''}
+          </div>
+
           {/* Autocomplete Dropdown */}
           {showDropdown && (
-            <div
-              ref={dropdownRef}
-              className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden max-h-72 overflow-y-auto"
-            >
-              <div className="p-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                Select Assam District
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden">
+              <div
+                aria-hidden="true"
+                className="flex items-center justify-between px-3.5 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider font-mono"
+              >
+                <span>Select Assam district</span>
+                <span className="hidden sm:inline normal-case tracking-normal font-sans font-medium">
+                  ↑↓ navigate · Enter select · Esc close
+                </span>
               </div>
-              {filteredSectors.map((sector) => {
-                const isSelected = sector.id === currentSector?.id;
-                return (
-                  <button
-                    key={sector.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectSector(sector.id);
-                      setQuery(sector.district);
-                      setShowDropdown(false);
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 border-b border-slate-50 dark:border-slate-800/50 last:border-0 transition ${
-                      isSelected ? 'bg-sky-50/70 dark:bg-slate-800 font-bold' : ''
-                    }`}
-                  >
-                    <div>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {sector.district}
-                      </span>
-                      <span className="text-xs text-slate-400 ml-2 font-mono">
-                        {sector.riverName}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                        sector.hazardLevel === 'HIGH' || sector.hazardLevel === 'CRITICAL'
-                          ? 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300'
-                          : sector.hazardLevel === 'MODERATE'
-                          ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
-                          : 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300'
-                      }`}
-                    >
-                      {sector.hazardLevel} • {sector.floodProb}%
-                    </span>
-                  </button>
-                );
-              })}
+              {filteredSectors.length === 0 ? (
+                <div className="px-3.5 py-4 text-sm text-slate-600 dark:text-slate-400">
+                  No matching district. Try a district, river, or town name.
+                </div>
+              ) : (
+                <ul
+                  id={listboxId}
+                  role="listbox"
+                  aria-label="Assam districts"
+                  className="max-h-72 overflow-y-auto py-1"
+                >
+                  {filteredSectors.map((sector, index) => {
+                    const isSelected = sector.id === currentSector?.id;
+                    const isActive = index === activeIndex;
+                    const sectorTier = getRiskLevelConfig(sector.hazardLevel).tier;
+                    return (
+                      <li
+                        key={sector.id}
+                        id={optionId(index)}
+                        role="option"
+                        aria-selected={isActive}
+                        // Keep focus in the input so typing/arrowing continues to work.
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectSector(sector)}
+                        onMouseMove={() => activeIndex !== index && setActiveIndex(index)}
+                        className={`relative mx-1 px-3 py-2.5 min-h-11 flex items-center justify-between gap-2 rounded-lg cursor-pointer transition-colors ${
+                          isActive
+                            ? 'bg-slate-100 dark:bg-slate-800'
+                            : isSelected
+                            ? 'bg-sky-50 dark:bg-sky-950/40'
+                            : ''
+                        }`}
+                      >
+                        {isSelected && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-sky-600 dark:bg-sky-400"
+                          />
+                        )}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-4 flex-shrink-0 flex justify-center">
+                            {isSelected && (
+                              <Check aria-hidden="true" className="w-4 h-4 text-sky-700 dark:text-sky-400" />
+                            )}
+                          </span>
+                          <div className="min-w-0 truncate">
+                            <span
+                              className={`text-sm text-slate-900 dark:text-slate-100 ${
+                                isSelected ? 'font-bold' : 'font-semibold'
+                              }`}
+                            >
+                              {sector.district}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 font-mono">
+                              {sector.riverName}
+                            </span>
+                            {isSelected && <span className="sr-only"> (currently selected)</span>}
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase flex-shrink-0 ${
+                            sectorTier === 'CRITICAL' || sectorTier === 'HIGH'
+                              ? 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300'
+                              : sectorTier === 'MODERATE'
+                              ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
+                              : 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
+                          }`}
+                        >
+                          {sector.hazardLevel} • {sector.floodProb}%
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           )}
         </div>
@@ -232,250 +391,236 @@ export const RiskHero: React.FC<RiskHeroProps> = ({
           href="https://sachet.ndma.gov.in/"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex w-full min-w-0 items-center gap-3 rounded-xl border border-sky-200/70 bg-sky-50/60 px-3 py-2 text-sky-800 transition-colors hover:border-sky-300 hover:bg-sky-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2 dark:border-sky-800/60 dark:bg-sky-950/30 dark:text-sky-200 dark:hover:border-sky-700 dark:hover:bg-sky-900/40 dark:focus-visible:ring-sky-400 dark:focus-visible:ring-offset-slate-950 lg:max-w-md"
+          className={`inline-flex h-12 items-center gap-2 self-start lg:self-auto rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 shadow-sm text-sm font-semibold text-sky-800 dark:text-sky-300 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${focusRing}`}
         >
-          <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0 text-sky-700 dark:text-sky-300" />
-          <span className="min-w-0">
-            <span className="block text-xs font-semibold group-hover:underline underline-offset-4">
-              Official NDMA Disaster Alerts
-            </span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-              View official disaster warnings and public alerts from NDMA Sachet.
-            </span>
-          </span>
+          <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span>Official NDMA alerts (Sachet)</span>
           <span className="sr-only">(opens in a new tab)</span>
         </a>
       </div>
 
-      {/* Analyzing Banner (Subtle Feedback) */}
+      {/* Loading feedback while the selected area is being assessed */}
       {isAnalyzing && currentSector && (
-        <div className="mb-3 p-2.5 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-900 dark:text-sky-200 text-xs flex items-center gap-2 animate-pulse">
-          <Sparkles className="w-4 h-4 text-sky-600 dark:text-sky-400 animate-spin" />
-          <span className="font-semibold">
-            Updating hydrological simulation for {currentSector.district}...
-          </span>
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-3 px-3 py-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-900 dark:text-sky-200 text-sm flex items-center gap-2"
+        >
+          <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin text-sky-600 dark:text-sky-400" />
+          <span className="font-semibold">Loading flood risk for {currentSector.district}…</span>
         </div>
       )}
 
-      {/* 2. THE HERO RISK SECTION ("ONE SCREEN → ONE PRIMARY DECISION") */}
+      {/* 2. HERO RISK SECTION: WHERE / WHAT / HOW SEVERE / WHEN / WHAT TO DO */}
       {!currentSector ? (
-        <div className="relative rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 p-8 sm:p-10 text-center flex flex-col items-center gap-3">
+        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 p-8 sm:p-10 text-center flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-            <MapPin className="w-6 h-6" />
+            <MapPin aria-hidden="true" className="w-6 h-6" />
           </div>
           <h2 className="font-heading font-extrabold text-lg sm:text-xl text-[#0b1c30] dark:text-white">
             Select a district to view flood risk
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
-            Search for your district above or use your current location to see live flood risk, predictions, and safety guidance.
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+            Search for your district above or use your current location to see its flood risk assessment, forecast, and safety guidance.
           </p>
         </div>
       ) : (
-      <div
-        key={currentSector.id}
-        className={`relative overflow-hidden rounded-2xl border ${riskConfig.borderClass} ${riskConfig.cardBg} p-5 sm:p-7 transition-colors risk-card-enter`}
-      >
-        {/* Risk-aware ambient animation layer — decorative only, sits behind
-            all real content and never affects layout (see RiskStatusAnimation). */}
-        <RiskStatusAnimation variant={riskConfig.animationVariant} />
+        <div
+          key={currentSector.id}
+          className={`relative overflow-hidden rounded-2xl border ${riskConfig.borderClass} ${riskConfig.cardBg} p-5 sm:p-7 transition-colors risk-card-enter`}
+        >
+          {/* Risk-aware ambient animation layer: decorative only, sits behind
+              all real content and never affects layout (see RiskStatusAnimation). */}
+          <RiskStatusAnimation variant={riskConfig.animationVariant} />
 
-        {/* Real card content sits above the animation overlay. */}
-        <div className="relative z-10">
-        {/* Top Header: Location + Status Badge */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/70 dark:border-slate-800/80">
-          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-white/80 dark:bg-slate-800/80 shadow-2xs flex items-center justify-center text-sky-600 dark:text-sky-400 flex-shrink-0">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-heading font-extrabold text-2xl sm:text-3xl tracking-tight text-[#0b1c30] dark:text-white">
-                  {currentSector.district}, {currentSector.state}
-                </h1>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
-                  {currentSector.riverName}
-                </span>
+          <div className="relative z-10">
+            {/* WHERE + HOW SEVERE */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/70 dark:border-slate-800/80">
+              <div className="flex items-start gap-3 text-slate-800 dark:text-slate-100 min-w-0">
+                <MapPin aria-hidden="true" className="w-5 h-5 mt-1.5 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="font-heading font-extrabold text-2xl sm:text-3xl tracking-tight text-[#0b1c30] dark:text-white">
+                      {currentSector.district}, {currentSector.state}
+                    </h1>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+                      {currentSector.riverName}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                    {currentSector.subdivision} • Station: {currentSector.stationCode}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Subdivision: {currentSector.subdivision} • Station: {currentSector.stationCode}
-              </p>
-            </div>
-          </div>
 
-          {/* Prominent Risk State Badge (Color + Icon + Text + Badge) */}
-          <div className="flex items-center gap-2 self-start sm:self-center">
-            <div
-              key={currentSector.id}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full font-heading font-extrabold text-xs sm:text-sm tracking-wider uppercase shadow-xs risk-badge-entrance ${riskConfig.badgeBg}`}
-            >
-              <RiskIcon className="w-4 h-4 flex-shrink-0" />
-              <span>{riskConfig.label}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Centerpiece: Primary Decision Metrics ("AM I AT RISK?") */}
-        <div className="py-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          {/* Left: Giant Primary Flood Probability */}
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono">
-              FLOOD PROBABILITY
-            </span>
-            <div className="flex items-baseline gap-3 mt-1">
-              <span
-                className={`font-heading font-extrabold text-5xl sm:text-6xl leading-none tracking-tight tabular-nums ${riskConfig.accentText}`}
+              <div
+                key={currentSector.id}
+                className={`flex items-center gap-2 self-start sm:self-center px-3.5 py-1.5 rounded-full font-heading font-extrabold text-xs sm:text-sm tracking-wider uppercase risk-badge-entrance ${riskConfig.badgeBg}`}
               >
-                {animatedFloodProb}%
-              </span>
-              <div className="flex flex-col">
-                <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
-                  {currentSector.statusSummary}
-                </span>
-                <span className={`text-xs font-semibold mt-0.5 ${riskConfig.accentText}`}>
-                  {riskConfig.statusLine}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Surge: <strong className="font-mono text-red-600 dark:text-red-400">{currentSector.riverStageDelta}</strong> above danger level
-                </span>
+                <RiskIcon aria-hidden="true" className="w-4 h-4 flex-shrink-0" />
+                <span>{riskConfig.label}</span>
               </div>
             </div>
-          </div>
 
-          {/* Right: Primary Immediate Action CTAs */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={onViewRiskMap}
-              id="hero-view-risk-map-btn"
-              className="flex min-h-11 items-center gap-2 px-5 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 active:scale-[0.98] text-white font-semibold text-sm transition-colors"
-            >
-              <Map className="w-4 h-4" />
-              <span>View Risk Map</span>
-            </button>
-
-            <button
-              onClick={onWhatShouldIDo}
-              id="hero-what-should-i-do-btn"
-              className="flex min-h-11 items-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700/80 active:scale-[0.98] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold text-sm transition-colors"
-            >
-              <ShieldAlert className="w-4 h-4" />
-              <span>What Should I Do?</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 3 Secondary Essential Metrics (Scannable in 1 second) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-200/70 dark:border-slate-800/80">
-          {/* 1. Expected Timing */}
-          <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold text-slate-400 uppercase font-mono block">
-                EXPECTED TIMING
-              </span>
-              <span className="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate block">
-                {currentSector.peakWindow || '18–36 Hours'}
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 truncate block">
-                {currentSector.peakWindowDesc || 'Peak hydro-surge window'}
-              </span>
-            </div>
-          </div>
-
-          {/* 2. People at Risk */}
-          <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold text-slate-400 uppercase font-mono block">
-                PEOPLE AT RISK
-              </span>
-              <span className="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate block">
-                {((currentSector.populationAtRisk ?? 0) / 1000).toFixed(0)}K Residents
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 truncate block">
-                In riverine floodplains
-              </span>
-            </div>
-          </div>
-
-          {/* 3. Expected Water Depth */}
-          <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200/70 dark:border-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
-              <Droplets className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold text-slate-400 uppercase font-mono block">
-                WATER DEPTH
-              </span>
-              <span className="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate block">
-                {currentSector.waterDepthAvgM}m avg • {currentSector.waterDepthPeakM}m peak
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 truncate block">
-                Spread over {currentSector.inundationAreaKm2} km²
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Progressive Disclosure: Accordion for Prediction Details */}
-        <div className="mt-4 pt-3 border-t border-slate-200/70 dark:border-slate-800/80">
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="w-full flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white py-1 transition"
-          >
-            <span className="flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-              <span>{showDetails ? 'Hide technical prediction details' : 'Show prediction details & telemetry ↓'}</span>
-            </span>
-            {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-
-          {showDetails && (
-            <div className="mt-3 p-4 rounded-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs animate-in fade-in duration-150">
+            {/* WHAT is the risk: primary figure + CTAs */}
+            <div className="py-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div>
-                <span className="text-slate-400 uppercase text-[10px] font-mono font-bold block">MODEL CONFIDENCE</span>
-                <span className="font-heading font-bold text-sm text-slate-900 dark:text-white mt-0.5 block">
-                  {currentSector.confidence}% (Ensemble AI)
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 font-mono">
+                  Flood probability
                 </span>
-                <span className="text-[11px] text-slate-500">SAR + Physics Routing</span>
+                <div className="flex items-baseline gap-4 mt-1 flex-wrap">
+                  <span
+                    className={`font-heading font-extrabold text-5xl sm:text-6xl leading-none tracking-tight tabular-nums ${riskConfig.accentText}`}
+                  >
+                    {animatedFloodProb}%
+                  </span>
+                  <div className="flex flex-col">
+                    <span className={`text-sm sm:text-base font-bold leading-tight ${riskConfig.accentText}`}>
+                      {riskConfig.statusLine}
+                    </span>
+                    <span className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                      River stage{' '}
+                      <strong className="font-mono text-slate-900 dark:text-slate-100">{currentSector.riverStageDelta}</strong>
+                      {currentSector.riverStageDesc ? ` · ${currentSector.riverStageDesc}` : ''}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <span className="text-slate-400 uppercase text-[10px] font-mono font-bold block">24H RAINFALL</span>
-                <span className="font-heading font-bold text-sm text-slate-900 dark:text-white mt-0.5 block">
-                  {currentSector.rainfall.currentRainfall24hMm} mm
-                </span>
-                <span className="text-[11px] text-slate-500">{currentSector.rainfall.intensity} intensity</span>
-              </div>
-
-              <div>
-                <span className="text-slate-400 uppercase text-[10px] font-mono font-bold block">RIVER GAUGE STAGE</span>
-                <span className="font-heading font-bold text-sm text-slate-900 dark:text-white mt-0.5 block">
-                  {currentSector.stageAbsolute}m
-                </span>
-                <span className="text-[11px] text-slate-500">Danger: {currentSector.dangerLevel}m</span>
-              </div>
-
-              <div>
-                <span className="text-slate-400 uppercase text-[10px] font-mono font-bold block">AFFECTED REGIONS</span>
-                <span className="font-heading font-bold text-sm text-slate-900 dark:text-white mt-0.5 block truncate">
-                  {currentSector.affectedNeighborhoods[0] || 'Riparian lowland'}
-                </span>
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
-                  onClick={onViewPredictions}
-                  className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1 mt-0.5"
+                  onClick={onViewRiskMap}
+                  id="hero-view-risk-map-btn"
+                  className={`flex min-h-11 items-center gap-2 px-5 py-3 rounded-xl bg-sky-700 hover:bg-sky-600 active:scale-[0.98] text-white font-semibold text-sm transition-colors ${focusRing}`}
                 >
-                  <span>Hydrograph analysis →</span>
+                  <Map aria-hidden="true" className="w-4 h-4" />
+                  <span>View risk map</span>
+                </button>
+
+                <button
+                  onClick={onWhatShouldIDo}
+                  id="hero-what-should-i-do-btn"
+                  className={`flex min-h-11 items-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700/80 active:scale-[0.98] text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-semibold text-sm transition-colors ${focusRing}`}
+                >
+                  <ShieldAlert aria-hidden="true" className="w-4 h-4" />
+                  <span>Find shelters</span>
                 </button>
               </div>
             </div>
-          )}
+
+            {/* WHAT SHOULD I DO */}
+            {primaryAction && (
+              <div className="mb-5 flex items-start gap-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/70 px-4 py-3">
+                <ClipboardList aria-hidden="true" className={`w-5 h-5 mt-0.5 flex-shrink-0 ${riskConfig.accentText}`} />
+                <div className="min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 font-mono block">
+                    Recommended action
+                  </span>
+                  <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug mt-0.5">
+                    {primaryAction}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Key figures: one bordered strip instead of three separate cards */}
+            <dl className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <div className="flex items-start gap-3 p-4">
+                <Clock aria-hidden="true" className="w-5 h-5 mt-0.5 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <dt className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase font-mono">Expected timing</dt>
+                  <dd className="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
+                    {currentSector.peakWindow}
+                  </dd>
+                  <dd className="text-xs text-slate-600 dark:text-slate-400">{currentSector.peakWindowDesc}</dd>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4">
+                <Users aria-hidden="true" className="w-5 h-5 mt-0.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <dt className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase font-mono">People at risk</dt>
+                  <dd className="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
+                    {(currentSector.populationAtRisk ?? 0).toLocaleString()}
+                  </dd>
+                  <dd className="text-xs text-slate-600 dark:text-slate-400">Residents in riverine floodplains</dd>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4">
+                <Droplets aria-hidden="true" className="w-5 h-5 mt-0.5 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <dt className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase font-mono">Water depth</dt>
+                  <dd className="font-heading font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
+                    {currentSector.waterDepthAvgM} m avg · {currentSector.waterDepthPeakM} m peak
+                  </dd>
+                  <dd className="text-xs text-slate-600 dark:text-slate-400">
+                    Over {currentSector.inundationAreaKm2} km²
+                  </dd>
+                </div>
+              </div>
+            </dl>
+
+            {/* WHEN + progressive disclosure */}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+              <DataFreshness />
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                aria-expanded={showDetails}
+                aria-controls="risk-hero-details"
+                className={`inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 rounded-lg transition-colors cursor-pointer ${focusRing}`}
+              >
+                <Activity aria-hidden="true" className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                <span>{showDetails ? 'Hide technical details' : 'Technical details'}</span>
+                {showDetails ? <ChevronUp aria-hidden="true" className="w-4 h-4" /> : <ChevronDown aria-hidden="true" className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {showDetails && (
+              <div
+                id="risk-hero-details"
+                className="mt-3 p-4 rounded-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm animate-in fade-in duration-150"
+              >
+                <div>
+                  <span className="text-slate-600 dark:text-slate-400 uppercase text-xs font-mono font-bold block">Model confidence</span>
+                  <span className="font-heading font-bold text-slate-900 dark:text-white mt-0.5 block">
+                    {currentSector.confidence}%
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">SAR + physics routing</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-600 dark:text-slate-400 uppercase text-xs font-mono font-bold block">24h rainfall</span>
+                  <span className="font-heading font-bold text-slate-900 dark:text-white mt-0.5 block">
+                    {currentSector.rainfall.currentRainfall24hMm} mm
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">{currentSector.rainfall.intensity} intensity</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-600 dark:text-slate-400 uppercase text-xs font-mono font-bold block">River gauge stage</span>
+                  <span className="font-heading font-bold text-slate-900 dark:text-white mt-0.5 block">
+                    {currentSector.stageAbsolute} m
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Danger level {currentSector.dangerLevel} m</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-600 dark:text-slate-400 uppercase text-xs font-mono font-bold block">Affected area</span>
+                  <span className="font-heading font-bold text-slate-900 dark:text-white mt-0.5 block truncate">
+                    {currentSector.affectedNeighborhoods[0] || 'Riparian lowland'}
+                  </span>
+                  <button
+                    onClick={onViewPredictions}
+                    className={`text-xs font-bold text-sky-700 dark:text-sky-400 hover:underline inline-flex items-center gap-1 mt-0.5 rounded ${focusRing}`}
+                  >
+                    <span>Hydrograph analysis →</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        </div>
-      </div>
       )}
     </section>
   );

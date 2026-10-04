@@ -9,6 +9,154 @@ export interface RegionRisk {
   flood_probability: number;
   timestamp?: string;
 }
+
+/**
+ * Backend prediction object consumable by the FloodGuard Risk Map.
+ *
+ * CRITICAL BUSINESS RULE:
+ * The frontend must NOT calculate risk levels (e.g. probability > 0.7 -> HIGH).
+ * Risk level will come from the backend. The frontend may only map
+ * backend-provided risk_level to presentation styling.
+ */
+export interface BackendRegionPrediction {
+  region_name: string;
+  risk_level: string; // Authoritative backend risk level (e.g. "CRITICAL", "HIGH", "MODERATE", "LOW")
+  flood_probability: number;
+  rainfall_24h?: number;
+  timestamp?: string;
+  region_id?: string;
+  coordinates?: [number, number]; // [longitude, latitude]
+  is_mock?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Authoritative location prediction object consumed by the Predictions page.
+ *
+ * CRITICAL BUSINESS RULES:
+ * 1. Backend owns risk classification (risk_level).
+ * 2. Frontend only displays risk_level, mapping it to presentation styling.
+ * 3. No frontend probability thresholds (e.g. probability > 0.7 -> HIGH).
+ * 4. No fabricated prediction values, timestamps, or rainfall values.
+ */
+export interface BackendLocationPrediction {
+  location_name: string;
+  flood_probability: number;
+  risk_level: string; // Authoritative backend risk level (e.g. "CRITICAL", "HIGH", "MODERATE", "LOW")
+  timestamp?: string; // ISO calculation timestamp (when provided)
+  district?: string;
+  sector_id?: string;
+  rainfall_24h?: number;
+  confidence?: number;
+  peak_water_depth_m?: number;
+  water_depth_avg_m?: number;
+  inundation_area_km2?: number;
+  population_at_risk?: number;
+  peak_window?: string;
+  river_stage_m?: number;
+  danger_level_m?: number;
+  river_name?: string;
+  station_name?: string;
+  status_summary?: string;
+  timeline?: ForecastStepData[] | any[];
+  factors?: CausalFactor[] | any[];
+  is_mock?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Canonical backend alert object consumed by the Alerts page.
+ * Corresponds to GET /api/alerts?min_severity=Moderate
+ *
+ * CRITICAL BUSINESS RULES:
+ * 1. Backend owns alert classification and severity.
+ * 2. Frontend only displays severity, mapping it to presentation styling.
+ * 3. Do not calculate severity (no heuristics or score checks).
+ * 4. Do not fabricate alerts.
+ */
+export interface BackendAlert {
+  id: string;
+  region: string; // e.g. "Dhemaji District", "Majuli"
+  severity: string; // e.g. "Critical", "High", "Moderate", "Resolved"
+  message: string; // Primary advisory or directive statement
+  timestamp: string; // Calculation / issuance timestamp from backend
+  headline?: string;
+  summary?: string;
+  description?: string;
+  action_items?: string[];
+  recommended_action?: string;
+  issued_by?: string;
+  authority?: string;
+  affected_population?: number;
+  river_basin?: string;
+  sector_id?: string;
+  is_mock?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Canonical backend historical record from GET /api/history/{city_name}
+ *
+ * Expected fields:
+ * - date: Observation date or timestamp
+ * - rainfall_mm: Measured rainfall in mm
+ * - flood_probability: Flood probability percentage (0-100)
+ *
+ * CRITICAL BUSINESS RULES:
+ * 1. Do not generate fake historical records to fill charts.
+ * 2. Only real backend data or isolated development mock data.
+ * 3. Never synthesize random numbers if rainfall_mm or flood_probability is missing.
+ */
+export interface BackendHistoryRecord {
+  date: string;
+  rainfall_mm?: number;
+  flood_probability?: number;
+  city_name?: string;
+  is_mock?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Hydrological flood simulation scenario request (POST /api/simulate)
+ *
+ * CRITICAL BUSINESS RULES:
+ * 1. SIMULATION MODE — This is a hypothetical scenario, not an actual observed flood event.
+ * 2. Simulation data must NEVER be presented as actual flood observations.
+ * 3. Keep simulation state strictly separated from live prediction state.
+ */
+export interface BackendSimulationRequest {
+  severity_multiplier?: number; // 0.5 to 3.0
+  use_live_weather?: boolean;
+  custom_rainfall_mm?: number;
+  city_or_district?: string;
+  [key: string]: unknown;
+}
+
+export interface BackendSimulationResultItem {
+  name: string;
+  risk_score?: number;
+  risk_level?: string;
+  inundation_pct?: number;
+  water_depth_m?: number;
+  impact?: {
+    population_at_risk?: number;
+    infrastructure_affected?: number;
+    [key: string]: unknown;
+  };
+  is_simulation?: boolean;
+  is_mock?: boolean;
+  [key: string]: unknown;
+}
+
+export interface BackendSimulationResponse {
+  simulation?: BackendSimulationResultItem[];
+  status?: string;
+  parameters?: BackendSimulationRequest;
+  timestamp?: string;
+  is_simulation?: boolean;
+  is_mock?: boolean;
+  [key: string]: unknown;
+}
 export interface CausalFactor {
   id: string;
   name: string;
@@ -181,6 +329,35 @@ export interface HistoricalYearRecord {
   peakMonth?: string;
   embankmentBreachesCount?: number;
   summaryNarrative?: string;
+}
+
+export interface FloodEvent {
+  year: number;
+  population_affected_lakh?: number;
+  crop_area_affected_lakh_ha?: number;
+  human_lives_lost?: number;
+  cattle_lost?: number;
+  total_damage_crore?: number;
+  villages_affected?: number;
+  districts_affected?: number;
+  source: string;
+}
+
+export interface ProofSource {
+  resource: string;
+  url: string;
+  what_it_proves: string;
+}
+
+export interface SatelliteEvidenceItem {
+  year: number;
+  resource: string;
+  url: string;
+  what_it_proves: string;
+  organization: string;
+  sensor?: string;
+  acquisition_date?: string;
+  description: string;
 }
 
 export interface ModelMetric {

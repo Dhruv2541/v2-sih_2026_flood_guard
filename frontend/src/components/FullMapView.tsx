@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { InteractiveMap } from './InteractiveMap';
 import { SectorInspector } from './SectorInspector';
 import { SectorData } from '../types';
 import { ASSAM_SECTORS } from '../data/assamData';
 import { mockRegionRiskData } from '../data/mockRiskData';
-import { Compass, Layers, MapPin, Droplets, Users, ShieldAlert, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Clock, Waves, Compass, Layers, MapPin, Droplets, Users, ShieldAlert, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface FullMapViewProps {
   currentSector: SectorData;
@@ -19,20 +19,23 @@ export const FullMapView: React.FC<FullMapViewProps> = ({
   onOpenDiagnostic,
   onViewWeights,
 }) => {
+  const [forecastHour, setForecastHour] = useState<number>(0);
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true);
   const [isLegendOpen, setIsLegendOpen] = useState<boolean>(false);
 
-  // DAY 2: Dynamically patch the current sector with live mock RegionRisk data
-  const regionRisk = mockRegionRiskData.find(r => r.region_id === currentSector.id);
-  const dynamicSector = regionRisk ? {
-    ...currentSector,
-    floodProb: regionRisk.flood_probability,
-    hazardLevel: regionRisk.risk_level as any,
-    vulnerabilityIndex: regionRisk.flood_probability,
-  } : currentSector;
+  // Dynamically patch the current sector with live mock RegionRisk data (memoized to avoid Mapbox thrashing)
+  const dynamicSector = useMemo(() => {
+    const regionRisk = mockRegionRiskData.find(r => r.region_id === currentSector.id);
+    return regionRisk ? {
+      ...currentSector,
+      floodProb: regionRisk.flood_probability,
+      hazardLevel: regionRisk.risk_level as any,
+      vulnerabilityIndex: regionRisk.flood_probability,
+    } : currentSector;
+  }, [currentSector]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden bg-slate-950 flex select-none animate-in fade-in duration-300">
+    <div className="relative w-full h-[calc(100dvh-112px)] md:h-[calc(100vh-64px)] overflow-hidden bg-slate-950 flex select-none animate-in fade-in duration-300 min-w-0">
       
       {/* Background GIS Map */}
       <div className="absolute inset-0 z-0">
@@ -40,20 +43,22 @@ export const FullMapView: React.FC<FullMapViewProps> = ({
           currentSector={dynamicSector}
           onSelectSector={onSelectSector}
           onOpenDiagnostic={onOpenDiagnostic}
+          forecastHour={forecastHour}
+          onForecastHourChange={setForecastHour}
         />
       </div>
 
       {/* Floating Collapsible Inspector Panel (Right Side) */}
       <div 
-        className={`absolute top-4 right-4 z-20 transition-transform duration-500 ease-in-out w-full max-w-sm sm:w-[380px] h-[calc(100%-120px)] sm:h-[calc(100%-80px)] flex ${
-          isInspectorOpen ? 'translate-x-0' : 'translate-x-[110%]'
+        className={`absolute top-4 right-4 z-20 transition-transform duration-500 ease-in-out w-[calc(100vw-32px)] sm:w-[380px] h-[calc(100%-120px)] sm:h-[calc(100%-80px)] flex ${
+          isInspectorOpen ? 'translate-x-0' : 'translate-x-[115%]'
         }`}
       >
         <div className="relative w-full h-full">
           {/* Toggle Button attached to the side of the panel */}
           <button
             onClick={() => setIsInspectorOpen(!isInspectorOpen)}
-            className="absolute -left-10 top-4 bg-slate-900/90 backdrop-blur-md border border-slate-700 p-2 rounded-l-xl text-slate-300 hover:text-white shadow-lg transition-colors flex items-center justify-center pointer-events-auto"
+            className="absolute -left-11 top-4 bg-slate-900/90 backdrop-blur-md border border-slate-700 min-w-[44px] min-h-[44px] p-2 rounded-l-xl text-slate-300 hover:text-white shadow-lg transition-colors flex items-center justify-center pointer-events-auto cursor-pointer"
             aria-label={isInspectorOpen ? "Close Inspector" : "Open Inspector"}
           >
             {isInspectorOpen ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -71,22 +76,22 @@ export const FullMapView: React.FC<FullMapViewProps> = ({
         </div>
       </div>
 
-      {/* Floating Toggle Button for when panel is closed (only visible if closed to avoid z-index overlap issues, though handled by absolute above) */}
+      {/* Floating Toggle Button for when panel is closed */}
       {!isInspectorOpen && (
         <button
           onClick={() => setIsInspectorOpen(true)}
-          className="absolute top-8 right-0 bg-slate-900/90 backdrop-blur-md border border-slate-700 border-r-0 p-2 rounded-l-xl text-slate-300 hover:text-white shadow-lg transition-colors flex items-center justify-center pointer-events-auto z-20"
+          className="absolute top-8 right-0 bg-slate-900/90 backdrop-blur-md border border-slate-700 border-r-0 min-w-[44px] min-h-[44px] p-2 rounded-l-xl text-slate-300 hover:text-white shadow-lg transition-colors flex items-center justify-center pointer-events-auto z-20 cursor-pointer"
           aria-label="Open Inspector"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
       )}
 
-      {/* Floating Legend / Guide (Bottom Left) */}
-      <div className="absolute bottom-6 left-4 z-20 pointer-events-auto flex flex-col-reverse items-start gap-2">
+      {/* Floating Legend / Guide (Bottom Left - stacked above mobile timeline bar) */}
+      <div className="absolute bottom-20 sm:bottom-6 left-4 z-20 pointer-events-auto flex flex-col-reverse items-start gap-2">
         <button
           onClick={() => setIsLegendOpen(!isLegendOpen)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md shadow-md text-xs font-bold transition-all border ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] rounded-xl backdrop-blur-md shadow-md text-xs font-bold transition-all border cursor-pointer ${
             isLegendOpen
               ? 'bg-[#0b1c30] text-white border-[#0b1c30] dark:bg-sky-600 dark:border-sky-500 shadow-sky-500/10'
               : 'bg-white/95 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 border-slate-200/90 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800'

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { CheckCircle2, AlertTriangle, Info, X, ArrowRight } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { RiskHero } from './components/RiskHero';
 import { AssamOverviewMap } from './components/AssamOverviewMap';
@@ -15,9 +15,11 @@ import { PredictionsView } from './components/PredictionsView';
 import { ImpactView } from './components/ImpactView';
 import { AlertsView } from './components/AlertsView';
 import { HistoricalView } from './components/HistoricalView';
+import { SimulationView } from './components/SimulationView';
 import { MethodologyView } from './components/MethodologyView';
 import { SelectDistrictPrompt } from './components/SelectDistrictPrompt';
 import { ASSAM_SECTORS } from './data/assamData';
+import { getRiskLevelConfig } from './lib/riskLevelConfig';
 import { useGeolocation } from './hooks/useGeolocation';
 
 export default function App() {
@@ -28,17 +30,32 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [forecastHour, setForecastHour] = useState<number>(0);
 
+  const analyzingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const currentSector = selectedSectorId ? ASSAM_SECTORS[selectedSectorId] ?? null : null;
 
-  const handleSelectSector = (id: string) => {
+  const handleSelectSector = useCallback((id: string) => {
     if (ASSAM_SECTORS[id]) {
       setIsAnalyzing(true);
       setSelectedSectorId(id);
-      setTimeout(() => {
+      if (analyzingTimerRef.current) {
+        clearTimeout(analyzingTimerRef.current);
+      }
+      analyzingTimerRef.current = setTimeout(() => {
         setIsAnalyzing(false);
+        analyzingTimerRef.current = null;
       }, 700);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (analyzingTimerRef.current) {
+        clearTimeout(analyzingTimerRef.current);
+        analyzingTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const { locationLoading, locationToast, handleUseLocation } = useGeolocation(handleSelectSector);
 
@@ -50,14 +67,14 @@ export default function App() {
     window.location.href = `tel:${num.replace(/[^0-9]/g, '')}`;
   };
 
-  const handleCheckMyRisk = () => {
+  const handleCheckMyRisk = useCallback(() => {
     setActiveTab('overview');
     const input = document.getElementById('flood-risk-search-input');
     if (input) {
       input.focus();
       window.scrollTo({ top: 120, behavior: 'smooth' });
     }
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f8faff] dark:bg-slate-950 text-[#0b1c30] dark:text-slate-100 flex flex-col font-sans selection:bg-sky-200 selection:dark:bg-sky-900 transition-colors duration-200 w-full max-w-full overflow-x-hidden min-w-0">
@@ -102,7 +119,7 @@ export default function App() {
             )}
 
             {/* 1. EMERGENCY STATUS / ALERT STRIP (if critical) */}
-            {currentSector && (currentSector.hazardLevel === 'CRITICAL' || currentSector.hazardLevel === 'HIGH') && (
+            {currentSector && ['CRITICAL', 'HIGH'].includes(getRiskLevelConfig(currentSector.hazardLevel).tier) && (
               <div className="fg-page-enter">
                 <AlertDirectiveBanner
                   sector={currentSector}
@@ -134,10 +151,10 @@ export default function App() {
                 </h2>
                 <button
                   onClick={() => setActiveTab('map')}
-                  className="text-sm font-semibold text-sky-700 dark:text-sky-400 hover:text-sky-900 dark:hover:text-sky-300 transition inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/50"
+                  className="text-sm font-semibold text-sky-700 dark:text-sky-400 hover:text-sky-900 dark:hover:text-sky-300 transition-colors inline-flex min-h-11 items-center gap-1.5 px-3 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 dark:focus-visible:ring-sky-400"
                 >
-                  <span>Open Full GIS View</span>
-                  <span>→</span>
+                  <span>Open full map view</span>
+                  <ArrowRight aria-hidden="true" className="w-4 h-4" />
                 </button>
               </div>
 
@@ -219,6 +236,11 @@ export default function App() {
         {/* Tab 7: Methodology & Architecture View */}
         {activeTab === 'methodology' && (
           <MethodologyView />
+        )}
+
+        {/* Tab 8: Scenario Simulation View (POST /api/simulate) */}
+        {activeTab === 'simulation' && (
+          <SimulationView />
         )}
       </main>
 

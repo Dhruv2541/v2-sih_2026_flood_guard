@@ -1,23 +1,23 @@
 /**
  * FloodGuard ML Prediction API Service
  * 
- * This service layer abstracts future ML model API integration.
- * SECURITY NOTE: Never put ML API keys in frontend code or environment variables.
- * The frontend calls a secure backend endpoint, which then calls the ML API with its secret key.
+ * @deprecated LEGACY SERVICE - FOR RETENTION ONLY.
  * 
- * Current behavior: Uses baseline prediction API (demo-baseline-v1) when available.
- * Falls back to mock data when API is unavailable.
+ * ARCHITECTURE RULES:
+ * - Production code must use `src/api/predictions.ts` (Component -> API Layer -> Backend).
+ * - Development UI testing must use `src/mocks/predictions.mock.ts` or `src/mocks/adapter.ts`.
+ * - Never silently substitute mock data when a real backend API call fails.
  */
 
 import { SectorData } from '../types';
 import { ASSAM_SECTORS } from '../data/assamData';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// API Request & Response Types (matching backend MLPredictionOutput)
+// API Request & Response Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface PredictionRequest {
-  regionId: string;
+  sectorId: string;
   latitude: number;
   longitude: number;
   /** ISO 8601 timestamp for prediction baseline */
@@ -27,22 +27,25 @@ export interface PredictionRequest {
 }
 
 export interface PredictionResponse {
-  regionId: string;
-  generatedAt: string;
-  forecastValidUntil: string;
-  floodProbability: number;        // 0-1
-  riskLevel: 'low' | 'moderate' | 'high' | 'severe';
-  modelVersion: string;
+  sectorId: string;
+  timestamp: string;
+  floodProbability: number;        // 0-100
+  riskLevel: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL' | 'SEVERE' | 'RESOLVED';
+  confidence: number;               // 0-100
+  inundationAreaKm2: number;
+  peakWaterDepthM: number;
+  populationAtRisk: number;
+  peakWindow: string;               // e.g., "18-36 Hrs"
+  rainfall24hMm: number;
+  riverStageM: number;
+  dangerLevelM: number;
   
-  /** Optional extended fields for UI compatibility */
-  confidence?: number;               // 0-100
-  inundationAreaKm2?: number;
-  peakWaterDepthM?: number;
-  populationAtRisk?: number;
-  peakWindow?: string;               // e.g., "18-36 Hrs"
-  rainfall24hMm?: number;
-  riverStageM?: number;
-  dangerLevelM?: number;
+  /** Model metadata */
+  modelVersion: string;
+  dataFreshness: 'real-time' | 'recent' | 'stale' | 'unavailable';
+  lastUpdated: string;              // ISO 8601
+  
+  /** Optional forecast timeline */
   timeline?: Array<{
     hour: number;
     floodProbability: number;
@@ -70,7 +73,7 @@ export type PredictionResult =
 // Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const API_TIMEOUT_MS = 15000;
 const STALE_DATA_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -88,42 +91,9 @@ function isDataStale(timestamp: string): boolean {
 }
 
 /**
- * Convert backend MLPredictionOutput to frontend PredictionResponse
- * Maps risk levels and probability scales
+ * Convert SectorData to PredictionResponse format
  */
-function backendToFrontend(backend: any): any {
-  const riskLevelMap: Record<string, string> = {
-    'low': 'LOW',
-    'moderate': 'MODERATE', 
-    'high': 'HIGH',
-    'severe': 'CRITICAL',
-  };
-  
-  return {
-    ...backend,
-    sectorId: backend.regionId,
-    timestamp: backend.generatedAt,
-    floodProbability: Math.round(backend.floodProbability * 100), // 0-1 -> 0-100
-    riskLevel: riskLevelMap[backend.riskLevel] || 'MODERATE',
-    confidence: 85, // Baseline model confidence
-    modelVersion: backend.modelVersion,
-    dataFreshness: 'real-time',
-    lastUpdated: backend.generatedAt,
-    // Add computed fields for UI compatibility
-    inundationAreaKm2: backend.floodProbability * 50, // Estimate
-    peakWaterDepthM: backend.floodProbability * 2,   // Estimate
-    populationAtRisk: 1000, // Placeholder
-    peakWindow: '6-12 Hrs',
-    rainfall24hMm: 0,
-    riverStageM: 0,
-    dangerLevelM: 0,
-  };
-}
-
-/**
- * Convert SectorData to PredictionResponse format (fallback)
- */
-function sectorToPrediction(sector: any): any {
+function sectorToPrediction(sector: SectorData): PredictionResponse {
   return {
     sectorId: sector.id,
     timestamp: new Date().toISOString(),
@@ -177,23 +147,29 @@ async function fetchWithTimeout(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get flood prediction for a specific region
+ * Get flood prediction for a specific sector
  * 
  * @param request - Prediction request parameters
  * @returns Prediction result with status
+ * 
+ * @example
+ * const result = await getPrediction({ sectorId: 'dhemaji', latitude: 27.4812, longitude: 94.5822 });
+ * if (result.status === 'success') {
+ *   console.log('Flood probability:', result.data.floodProbability);
+ * }
  */
 export async function getPrediction(
-  request: { regionId: string; latitude: number; longitude: number; timestamp?: string; forecastHours?: number }
-): Promise<any> {
+  request: PredictionRequest
+): Promise<PredictionResult> {
   // If no API base URL configured, return mock data
   if (!API_BASE_URL || API_BASE_URL === '') {
-    const mockSector = ASSAM_SECTORS[request.regionId];
+    const mockSector = ASSAM_SECTORS[request.sectorId];
     if (!mockSector) {
       return {
         status: 'error',
         error: {
           error: 'SectorNotFound',
-          message: `Sector '${request.regionId}' not found in mock data`,
+          message: `Sector '${request.sectorId}' not found in mock data`,
           timestamp: new Date().toISOString(),
         },
       };
@@ -206,15 +182,21 @@ export async function getPrediction(
   }
 
   try {
-    // Backend uses /api/v1/predict/{regionId} for GET or /api/v1/predict for POST
-    const url = `${API_BASE_URL}/api/v1/predict/${request.regionId}`;
+    const url = `${API_BASE_URL}/api/predict`;
     const response = await fetchWithTimeout(
       url,
       {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          sector_id: request.sectorId,
+          latitude: request.latitude,
+          longitude: request.longitude,
+          timestamp: request.timestamp || new Date().toISOString(),
+          forecast_hours: request.forecastHours || 72,
+        }),
       },
       API_TIMEOUT_MS
     );
@@ -232,38 +214,28 @@ export async function getPrediction(
       };
     }
 
-    const backendData = await response.json();
-    const frontendData = backendToFrontend(backendData);
+    const data: PredictionResponse = await response.json();
 
     // Check if data is stale
-    if (isDataStale(backendData.generatedAt)) {
+    if (isDataStale(data.lastUpdated)) {
       return {
         status: 'stale',
-        data: frontendData,
+        data,
         warning: `Prediction data is older than ${STALE_DATA_THRESHOLD_MS / 60000} minutes. Telemetry may be outdated.`,
       };
     }
 
     return {
       status: 'success',
-      data: frontendData,
+      data,
     };
   } catch (error) {
-    // If API fails, return mock data as fallback
-    const mockSector = ASSAM_SECTORS[request.regionId];
-    if (mockSector) {
-      console.warn('Prediction API unavailable, using mock data:', error);
-      return {
-        status: 'unavailable',
-        fallback: mockSector,
-      };
-    }
-
+    // Architectural rule: Never silently substitute mock data when the real backend API fails
     return {
       status: 'error',
       error: {
         error: 'NetworkError',
-        message: error instanceof Error ? error.message : 'Failed to fetch prediction',
+        message: error instanceof Error ? error.message : 'Failed to fetch prediction from backend API',
         timestamp: new Date().toISOString(),
       },
     };
@@ -271,21 +243,50 @@ export async function getPrediction(
 }
 
 /**
- * Get predictions for all regions (batch)
+ * Get predictions for multiple sectors (batch request)
+ * 
+ * @param requests - Array of prediction requests
+ * @returns Array of prediction results
  */
-export async function getAllPredictions(): Promise<any[]> {
+export async function getBatchPredictions(
+  requests: PredictionRequest[]
+): Promise<PredictionResult[]> {
+  // If no API configured, return mock data for all
   if (!API_BASE_URL || API_BASE_URL === '') {
-    return Object.values(ASSAM_SECTORS).map(sector => ({
-      status: 'unavailable',
-      fallback: sector,
-    }));
+    return requests.map(req => {
+      const mockSector = ASSAM_SECTORS[req.sectorId];
+      return mockSector
+        ? { status: 'unavailable' as const, fallback: mockSector }
+        : {
+            status: 'error' as const,
+            error: {
+              error: 'SectorNotFound',
+              message: `Sector '${req.sectorId}' not found`,
+              timestamp: new Date().toISOString(),
+            },
+          };
+    });
   }
 
   try {
-    const url = `${API_BASE_URL}/api/v1/predict`;
+    const url = `${API_BASE_URL}/api/predict/batch`;
     const response = await fetchWithTimeout(
       url,
-      { method: 'GET' },
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requests: requests.map(req => ({
+            sector_id: req.sectorId,
+            latitude: req.latitude,
+            longitude: req.longitude,
+            timestamp: req.timestamp || new Date().toISOString(),
+            forecast_hours: req.forecastHours || 72,
+          })),
+        }),
+      },
       API_TIMEOUT_MS
     );
 
@@ -293,22 +294,40 @@ export async function getAllPredictions(): Promise<any[]> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const backendResults = await response.json();
-    return backendResults.map((backend: any) => ({
-      status: 'success',
-      data: backendToFrontend(backend),
-    }));
+    const { results }: { results: PredictionResponse[] } = await response.json();
+    
+    return results.map(data => {
+      if (isDataStale(data.lastUpdated)) {
+        return {
+          status: 'stale' as const,
+          data,
+          warning: 'Prediction data may be outdated',
+        };
+      }
+      return { status: 'success' as const, data };
+    });
   } catch (error) {
     console.warn('Batch prediction API unavailable, using mock data:', error);
-    return Object.values(ASSAM_SECTORS).map(sector => ({
-      status: 'unavailable',
-      fallback: sector,
-    }));
+    return requests.map(req => {
+      const mockSector = ASSAM_SECTORS[req.sectorId];
+      return mockSector
+        ? { status: 'unavailable' as const, fallback: mockSector }
+        : {
+            status: 'error' as const,
+            error: {
+              error: 'NetworkError',
+              message: 'Batch prediction failed',
+              timestamp: new Date().toISOString(),
+            },
+          };
+    });
   }
 }
 
 /**
  * Check API health status
+ * 
+ * @returns API status information
  */
 export async function checkApiHealth(): Promise<{
   available: boolean;
@@ -324,7 +343,7 @@ export async function checkApiHealth(): Promise<{
 
   try {
     const response = await fetchWithTimeout(
-      `${API_BASE_URL}/api/v1/health`,
+      `${API_BASE_URL}/api/health`,
       { method: 'GET' },
       5000
     );
@@ -350,42 +369,9 @@ export async function checkApiHealth(): Promise<{
   }
 }
 
-/**
- * Get model info
- */
-export async function getModelInfo(): Promise<any> {
-  if (!API_BASE_URL || API_BASE_URL === '') {
-    return {
-      modelVersion: 'mock-v1.0',
-      predictionMode: 'mock',
-    };
-  }
-
-  try {
-    const response = await fetchWithTimeout(
-      `${API_BASE_URL}/api/v1/predict/model/info`,
-      { method: 'GET' },
-      5000
-    );
-
-    if (response.ok) {
-      return await response.json();
-    }
-  } catch (error) {
-    console.warn('Model info API unavailable:', error);
-  }
-  
-  return {
-    modelVersion: 'unknown',
-    predictionMode: 'unknown',
-  };
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // React Hook (Optional)
 // ─────────────────────────────────────────────────────────────────────────────
-
-import * as React from 'react';
 
 /**
  * React hook for fetching predictions with loading states
@@ -393,8 +379,8 @@ import * as React from 'react';
  * 
  * const { data, loading, error, refetch } = usePrediction({ sectorId: 'dhemaji', ... });
  */
-export function usePrediction(request: { regionId: string; latitude: number; longitude: number } | null) {
-  const [result, setResult] = React.useState<any>({
+export function usePredictionData(request: PredictionRequest | null) {
+  const [result, setResult] = React.useState<PredictionResult>({
     status: 'loading',
     data: null,
   });
@@ -417,7 +403,7 @@ export function usePrediction(request: { regionId: string; latitude: number; lon
     return () => {
       cancelled = true;
     };
-  }, [request?.regionId, request?.timestamp]);
+  }, [request?.sectorId, request?.timestamp]);
 
   const refetch = React.useCallback(() => {
     if (request) {
@@ -438,3 +424,6 @@ export function usePrediction(request: { regionId: string; latitude: number; lon
     refetch,
   };
 }
+
+// Import React for the hook (only if used)
+import * as React from 'react';

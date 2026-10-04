@@ -1,3 +1,9 @@
+/**
+ * @deprecated LEGACY SERVICE.
+ * Production flow: Component -> src/api/history.ts -> Backend GET /api/history/{city_name}
+ * UI Mock flow: Component -> src/mocks/history.mock.ts or src/mocks/adapter.ts
+ */
+
 import { HISTORICAL_DATA } from '../data/assamData';
 import { HistoricalYearRecord } from '../types';
 

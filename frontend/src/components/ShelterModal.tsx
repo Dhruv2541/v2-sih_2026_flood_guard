@@ -43,7 +43,7 @@ export const ShelterModal: React.FC<ShelterModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-9 h-9 sm:w-8 sm:h-8 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors flex-shrink-0"
+            className="min-w-[44px] min-h-[44px] p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />

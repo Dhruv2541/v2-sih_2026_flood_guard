@@ -11,7 +11,7 @@
  * All state is local to this hook – no global app context is modified.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ASSAM_SECTORS } from '../data/assamData';
 
 // ---------------------------------------------------------------------------
@@ -143,11 +143,23 @@ export function useGeolocation(
   const [locationToast, setLocationToast] = useState<LocationToast | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const showToast = useCallback(
     (message: string, variant: ToastVariant) => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       setLocationToast({ message, variant });
-      toastTimerRef.current = setTimeout(() => setLocationToast(null), toastDurationMs);
+      toastTimerRef.current = setTimeout(() => {
+        setLocationToast(null);
+        toastTimerRef.current = null;
+      }, toastDurationMs);
     },
     [toastDurationMs],
   );
@@ -177,8 +189,11 @@ export function useGeolocation(
           return;
         }
 
-        // ── Step 2: Reverse-geocode with Nominatim ────────────────────────
+        // ── Step 2: Reverse-geocode with Nominatim (with timeout cancellation)
         let sectorId: string | null = null;
+        const geoController = new AbortController();
+        const geoTimeout = setTimeout(() => geoController.abort(), 7000);
+
         try {
           const url =
             `https://nominatim.openstreetmap.org/reverse?format=jsonv2` +
@@ -189,6 +204,7 @@ export function useGeolocation(
               // Nominatim usage policy: provide a descriptive User-Agent
               'Accept-Language': 'en',
             },
+            signal: geoController.signal,
           });
 
           if (resp.ok) {
@@ -205,7 +221,9 @@ export function useGeolocation(
             sectorId = resolveSectorFromAddress(data?.address ?? {});
           }
         } catch {
-          // Network / parse error — fall through to coordinate-based fallback
+          // Network / timeout / parse error — fall through to coordinate-based fallback
+        } finally {
+          clearTimeout(geoTimeout);
         }
 
         // ── Step 3: Coordinate fallback (inside Assam, district unresolved) ─

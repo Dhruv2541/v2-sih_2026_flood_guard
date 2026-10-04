@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Home, 
   Map, 
@@ -12,7 +12,8 @@ import {
   Info, 
   PhoneCall, 
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Sliders,
 } from 'lucide-react';
 import { ACTIVE_FLOOD_ALERTS } from '../data/assamData';
 import { ThemeToggle } from './ThemeToggle';
@@ -33,6 +34,36 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [isAlertDrawerOpen, setIsAlertDrawerOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAnalyticsDropdownOpen, setIsAnalyticsDropdownOpen] = useState(false);
+
+  const analyticsDropdownRef = useRef<HTMLDivElement>(null);
+  const alertDrawerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click with proper event listener cleanup
+  useEffect(() => {
+    if (!isAlertDrawerOpen && !isAnalyticsDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        isAnalyticsDropdownOpen &&
+        analyticsDropdownRef.current &&
+        !analyticsDropdownRef.current.contains(target)
+      ) {
+        setIsAnalyticsDropdownOpen(false);
+      }
+      if (
+        isAlertDrawerOpen &&
+        alertDrawerRef.current &&
+        !alertDrawerRef.current.contains(target)
+      ) {
+        setIsAlertDrawerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAlertDrawerOpen, isAnalyticsDropdownOpen]);
 
   const criticalAlertCount = ACTIVE_FLOOD_ALERTS.filter(
     (a) => a.riskLevel === 'CRITICAL' || a.riskLevel === 'HIGH'
@@ -50,12 +81,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   const secondaryNavItems = [
     { id: 'predictions', label: 'Predictions & Hydrograph', icon: Activity, desc: 'Water level timeline & AI explainability' },
     { id: 'impact', label: 'Impact & Infrastructure', icon: BarChart3, desc: 'Schools, hospitals & vulnerable populations' },
-    { id: 'methodology', label: 'Methodology & Sensors', icon: Info, desc: 'SAR satellite, CWC radar & physics model' },
+    { id: 'simulation', label: 'Scenario Simulation', icon: Sliders, desc: 'Hypothetical flood stress testing' },
+    { id: 'methodology', label: 'How It Works / Architecture', icon: Info, desc: 'Open-Meteo, CWC river telemetry & ML pipeline' },
   ];
+
+  const isSecondaryActive = secondaryNavItems.some((item) => item.id === activeTab);
 
   const handleNavClick = (tabId: string) => {
     setActiveTab(tabId);
     setIsMobileMenuOpen(false);
+    setIsAnalyticsDropdownOpen(false);
   };
 
   return (
@@ -74,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <FloodGuardBrandReveal />
           </div>
 
-          {/* Desktop Center: Clean 4-Item Primary Navigation */}
+          {/* Desktop Center: Clean Primary Navigation + Analytics & Tools Dropdown */}
           <nav className="hidden md:flex items-center space-x-1 lg:space-x-1.5">
             {primaryNavItems.map((item) => {
               const Icon = item.icon;
@@ -84,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   key={item.id}
                   id={`nav-link-${item.id}`}
                   onClick={() => handleNavClick(item.id)}
-                  className={`relative px-3.5 py-2 text-xs lg:text-sm font-semibold transition-all flex items-center gap-2 rounded-lg ${
+                  className={`relative px-3.5 py-2 min-h-[40px] text-xs lg:text-sm font-semibold transition-all flex items-center gap-2 rounded-lg cursor-pointer ${
                     isActive
                       ? 'text-[#0b1c30] dark:text-white bg-slate-100/90 dark:bg-slate-800'
                       : 'text-slate-600 dark:text-slate-400 hover:text-[#0b1c30] dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
@@ -93,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'opacity-70'}`} />
                   <span>{item.label}</span>
                   {item.badge && item.badge > 0 ? (
-                    <span aria-label={`${item.badge} active alerts`} className="inline-flex min-h-5 min-w-5 items-center justify-center px-1.5 py-0.5 bg-red-700 text-white text-[10px] font-extrabold rounded-full animate-pulse">
+                    <span className="px-1.5 py-0.2 bg-red-600 text-white text-[10px] font-extrabold rounded-full animate-pulse">
                       {item.badge}
                     </span>
                   ) : null}
@@ -103,6 +138,62 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               );
             })}
+
+            {/* Desktop Analytics & Tools Dropdown */}
+            <div className="relative" ref={analyticsDropdownRef}>
+              <button
+                id="nav-dropdown-analytics"
+                type="button"
+                onClick={() => setIsAnalyticsDropdownOpen(!isAnalyticsDropdownOpen)}
+                className={`relative px-3 py-2 min-h-[40px] text-xs lg:text-sm font-semibold transition-all flex items-center gap-1.5 rounded-lg cursor-pointer ${
+                  isSecondaryActive
+                    ? 'text-[#0b1c30] dark:text-white bg-slate-100/90 dark:bg-slate-800'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#0b1c30] dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                }`}
+                aria-expanded={isAnalyticsDropdownOpen}
+                aria-label="Deep Analysis & Tools Navigation"
+              >
+                <Sliders className={`w-4 h-4 ${isSecondaryActive ? 'text-sky-600 dark:text-sky-400' : 'opacity-70'}`} />
+                <span>Analytics &amp; Tools</span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isAnalyticsDropdownOpen ? 'rotate-90' : ''}`} />
+                {isSecondaryActive && (
+                  <span className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-[#0b1c30] dark:bg-sky-400 rounded-full" />
+                )}
+              </button>
+
+              {isAnalyticsDropdownOpen && (
+                <div 
+                  className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  id="analytics-dropdown-menu"
+                >
+                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1">
+                    Deep Intelligence Modules
+                  </div>
+                  {secondaryNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        id={`nav-link-${item.id}`}
+                        onClick={() => handleNavClick(item.id)}
+                        className={`w-full text-left px-2.5 py-2.5 rounded-lg transition flex items-start gap-2.5 min-h-[44px] cursor-pointer ${
+                          isActive
+                            ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-200 font-bold'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 text-sky-600 dark:text-sky-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="text-xs font-semibold">{item.label}</div>
+                          <div className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">{item.desc}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Right Side: Theme Toggle, Notifications, Primary CTA, and Mobile Menu */}
@@ -113,17 +204,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Notification Bell with Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={alertDrawerRef}>
               <button
                 onClick={() => setIsAlertDrawerOpen(!isAlertDrawerOpen)}
                 id="nav-notification-indicator"
-                className="relative min-w-[38px] min-h-[38px] sm:min-w-[42px] sm:min-h-[42px] flex items-center justify-center p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                className="relative min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:border-slate-700"
                 title="Active Flood Risk Alerts"
                 aria-label="Active Flood Risk Alerts"
               >
                 <Bell className="w-5 h-5" />
                 {criticalAlertCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                  <span className="absolute top-2 right-2 flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
                   </span>
@@ -178,13 +269,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setIsAlertDrawerOpen(false);
                         handleNavClick('alerts');
                       }}
-                      className="text-xs text-sky-700 dark:text-sky-400 hover:text-sky-900 dark:hover:text-sky-300 font-bold"
+                      className="text-xs text-sky-700 dark:text-sky-400 hover:text-sky-900 dark:hover:text-sky-300 font-bold p-1 min-h-[36px]"
                     >
                       View All Alerts →
                     </button>
                     <button
                       onClick={() => setIsAlertDrawerOpen(false)}
-                      className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                      className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1 min-h-[36px]"
                     >
                       Close
                     </button>
@@ -193,30 +284,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* Primary Action Button: "Check My Risk" */}
+            {/* Primary Action Button: "Check My Risk" (min 44px touch target) */}
             <button
               onClick={onCheckMyRisk}
               id="nav-check-risk-btn"
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 min-h-[38px] sm:min-h-[42px] rounded-lg bg-[#0b1c30] dark:bg-sky-600 hover:bg-[#152840] dark:hover:bg-sky-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-xs hover:shadow whitespace-nowrap"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 min-h-[44px] rounded-lg bg-[#0b1c30] dark:bg-sky-600 hover:bg-[#152840] dark:hover:bg-sky-500 active:scale-[0.98] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-xs hover:shadow whitespace-nowrap cursor-pointer"
             >
               <span className="w-2 h-2 rounded-full bg-sky-400 dark:bg-white animate-pulse flex-shrink-0"></span>
               <span>Check My Risk</span>
             </button>
 
-            {/* Mobile / Tablet Menu Button (Hamburger) */}
+            {/* Mobile / Tablet Menu Button (Hamburger - min 44px touch target) */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               id="nav-mobile-menu-btn"
               aria-label="Open Navigation Menu"
-              className="md:hidden min-w-[38px] min-h-[38px] flex items-center justify-center p-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Quick Tab Bar (Always Visible on Mobile: Home, Map, Alerts) */}
-        <div className="md:hidden flex items-center justify-around border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 px-2 py-1 text-xs">
+        {/* Mobile Quick Tab Bar (Always Visible on Mobile: Home, Map, Alerts, History - min 44px touch target) */}
+        <div className="md:hidden flex items-center justify-around border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 px-1 py-1 text-xs">
           {primaryNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -224,7 +315,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`flex-1 py-1.5 flex flex-col items-center gap-0.5 rounded-md transition ${
+                className={`flex-1 min-h-[44px] py-1 flex flex-col items-center justify-center gap-0.5 rounded-md transition cursor-pointer ${
                   isActive
                     ? 'text-sky-600 dark:text-sky-400 font-bold'
                     : 'text-slate-600 dark:text-slate-400'
@@ -236,7 +327,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-600" />
                   ) : null}
                 </div>
-                <span className="text-[11px]">{item.label}</span>
+                <span className="text-[11px] leading-tight">{item.label}</span>
               </button>
             );
           })}
@@ -264,7 +355,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="min-w-[44px] min-h-[44px] p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center justify-center cursor-pointer"
                   aria-label="Close menu"
                 >
                   <X className="w-5 h-5" />
@@ -272,7 +363,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               {/* Primary Pages */}
-              <div className="mt-4 space-y-1">
+              <div className="mt-4 space-y-1.5">
                 <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3 py-1 font-mono">
                   Primary Pages
                 </div>
@@ -283,7 +374,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button
                       key={item.id}
                       onClick={() => handleNavClick(item.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition ${
+                      className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
                         isActive
                           ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold'
                           : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -306,7 +397,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               {/* Extended Intelligence (Progressive Disclosure) */}
-              <div className="mt-5 space-y-1">
+              <div className="mt-5 space-y-1.5">
                 <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3 py-1 font-mono">
                   Deep Intelligence & Analysis
                 </div>
@@ -317,7 +408,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button
                       key={item.id}
                       onClick={() => handleNavClick(item.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition ${
+                      className={`w-full min-h-[44px] text-left px-3 py-2.5 rounded-lg transition cursor-pointer ${
                         isActive
                           ? 'bg-slate-100 dark:bg-slate-800 font-bold'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
@@ -338,14 +429,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Drawer Bottom Actions: Theme & Emergency Contact */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between px-1">
+              <div className="flex items-center justify-between px-1 min-h-[44px]">
                 <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Interface Appearance</span>
                 <ThemeToggle />
               </div>
 
               <a
                 href="tel:1070"
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs"
+                className="w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition"
               >
                 <PhoneCall className="w-4 h-4" />
                 <span>Call State Emergency: 1070</span>

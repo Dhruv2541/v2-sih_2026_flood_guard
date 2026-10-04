@@ -109,6 +109,12 @@ export const DataInaccuracyModal: React.FC<DataInaccuracyModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submissionTimersRef = useRef<number[]>([]);
+
+  const clearSubmissionTimers = () => {
+    submissionTimersRef.current.forEach((t) => clearTimeout(t));
+    submissionTimersRef.current = [];
+  };
 
   // Reset state when opening/closing
   useEffect(() => {
@@ -117,7 +123,11 @@ export const DataInaccuracyModal: React.FC<DataInaccuracyModalProps> = ({
       setIsSubmitting(false);
       setErrorMessage(null);
       setSubmissionStep('');
+      clearSubmissionTimers();
     }
+    return () => {
+      clearSubmissionTimers();
+    };
   }, [isOpen]);
 
   // Handle ESC key to close
@@ -185,19 +195,23 @@ export const DataInaccuracyModal: React.FC<DataInaccuracyModalProps> = ({
     setIsSubmitting(true);
     setSubmissionStep('Validating geospatial coordinates & sector metadata...');
 
-    setTimeout(() => {
+    clearSubmissionTimers();
+    const t1 = window.setTimeout(() => {
       setSubmissionStep('Cross-referencing Sentinel-1 SAR backscatter reflectance...');
-      setTimeout(() => {
+      const t2 = window.setTimeout(() => {
         setSubmissionStep('Calibrating ConvLSTM Bayesian ground-truth weighting...');
-        setTimeout(() => {
+        const t3 = window.setTimeout(() => {
           const randomCode = Math.floor(1000 + Math.random() * 9000);
           const generatedId = `HITL-${sector.stationCode}-${randomCode}`;
           setTicketId(generatedId);
           setIsSubmitting(false);
           setIsSubmitted(true);
         }, 600);
+        submissionTimersRef.current.push(t3);
       }, 600);
+      submissionTimersRef.current.push(t2);
     }, 500);
+    submissionTimersRef.current.push(t1);
   };
 
   const handleResetForm = () => {

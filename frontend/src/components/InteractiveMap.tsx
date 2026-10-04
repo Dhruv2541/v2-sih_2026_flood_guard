@@ -9,6 +9,8 @@ import {
   Eye,
   Layers3,
   Mountain,
+  Pause,
+  Play,
   Radio,
   SlidersHorizontal,
   Waves,
@@ -21,9 +23,12 @@ interface InteractiveMapProps {
   currentSector: SectorData;
   onSelectSector: (sectorId: string) => void;
   onOpenDiagnostic: () => void;
+  forecastHour?: number;
+  onForecastHourChange?: (hour: number) => void;
 }
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+const timelineSteps = [0, 6, 12, 24, 48, 72];
 const darkStyle = 'mapbox://styles/mapbox/dark-v11';
 const lightStyle = 'mapbox://styles/mapbox/light-v11';
 
@@ -43,10 +48,13 @@ const visibility = (map: mapboxgl.Map, layerId: string, isVisible: boolean) => {
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   currentSector,
   onOpenDiagnostic,
+  forecastHour = 0,
+  onForecastHourChange,
 }) => {
   const mapNode = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
+  const playInterval = useRef<number | null>(null);
   const { resolvedTheme } = useTheme();
   const appliedStyleTheme = useRef(resolvedTheme);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -56,11 +64,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const [showGauges, setShowGauges] = useState(true);
   const [showInfrastructure, setShowInfrastructure] = useState(true);
   const [terrainEnabled, setTerrainEnabled] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // Use current/live data (timeline[0] or default opacity)
   const activeStep = useMemo(
-    () => currentSector.timeline?.[0],
-    [currentSector],
+    () => currentSector.timeline?.find((step) => step.hour === forecastHour) || currentSector.timeline?.[0],
+    [currentSector, forecastHour],
   );
   const floodData = useMemo(
     () => inundationGeoJson(currentSector, activeStep?.inundationOpacity ?? 0.65),
@@ -229,11 +237,14 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     });
     return () => {
       resizeObserver.disconnect();
+      if (playInterval.current) window.clearInterval(playInterval.current);
       popupRef.current?.remove();
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  const prevSectorIdRef = useRef<string>(currentSector.id);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -244,7 +255,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       type: 'FeatureCollection',
       features: [{ type: 'Feature', properties: { district: currentSector.district }, geometry: { type: 'Point', coordinates: [currentSector.coordinates.lng, currentSector.coordinates.lat] } }],
     });
-    map.easeTo({ center: [currentSector.coordinates.lng, currentSector.coordinates.lat], duration: 700, essential: true });
+    // Only pan camera when selected sector ID changes, avoiding continuous camera thrashing on timeline steps
+    if (prevSectorIdRef.current !== currentSector.id) {
+      prevSectorIdRef.current = currentSector.id;
+      map.easeTo({ center: [currentSector.coordinates.lng, currentSector.coordinates.lat], duration: 700, essential: true });
+    }
   }, [currentSector, floodData, infrastructureData, isLoaded, updateSource]);
 
   useEffect(() => {
@@ -263,13 +278,21 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     const map = mapRef.current;
     if (!map || !isLoaded || !map.getLayer('flood-outline')) return;
     const shouldPulse = currentSector.hazardLevel === 'HIGH' || currentSector.hazardLevel === 'CRITICAL';
-    if (!shouldPulse) return;
+    if (!shouldPulse) {
+      map.setPaintProperty('flood-outline', 'line-opacity', 0.9);
+      return;
+    }
     let dim = false;
     const interval = window.setInterval(() => {
       if (map.getLayer('flood-outline')) map.setPaintProperty('flood-outline', 'line-opacity', dim ? 0.35 : 0.95);
       dim = !dim;
     }, 800);
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      if (map.getLayer('flood-outline')) {
+        map.setPaintProperty('flood-outline', 'line-opacity', 0.9);
+      }
+    };
   }, [currentSector.hazardLevel, isLoaded]);
 
   useEffect(() => {
@@ -283,7 +306,31 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       installLayers(map);
       map.setTerrain(terrainEnabled ? { source: 'mapbox-dem', exaggeration: 1.5 } : null);
     });
-  }, [resolvedTheme]);
+  }, [resolvedTheme, installLayers, terrainEnabled, isLoaded]);
+
+  const togglePlayback = () => {
+    if (isPlaying) {
+      if (playInterval.current) {
+        window.clearInterval(playInterval.current);
+        playInterval.current = null;
+      }
+      setIsPlaying(false);
+      return;
+    }
+    setIsPlaying(true);
+    let index = timelineSteps.indexOf(forecastHour);
+    playInterval.current = window.setInterval(() => {
+      index = (index + 1) % timelineSteps.length;
+      onForecastHourChange?.(timelineSteps[index]);
+      if (index === timelineSteps.length - 1) {
+        if (playInterval.current) {
+          window.clearInterval(playInterval.current);
+          playInterval.current = null;
+        }
+        setIsPlaying(false);
+      }
+    }, 1200);
+  };
 
   if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'pk.your_public_mapbox_token') {
     return (
@@ -294,8 +341,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   }
 
   return (
-    <section className="interactive-flood-map relative min-h-[440px] h-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-[#0E1B2F]" aria-label="Interactive flood risk map">
-      <div ref={mapNode} className="absolute inset-0 h-full w-full" />
+    <div className="interactive-flood-map relative min-h-[440px] h-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-[#0E1B2F]">
+      <div ref={mapNode} className="absolute inset-0 h-full w-full" aria-label="Interactive flood risk map" />
       {mapError && (
         <div className="absolute inset-0 z-30 grid place-items-center bg-[#07101F]/90 p-6 text-center">
           <div className="max-w-sm rounded-2xl border border-white/10 bg-[#0E1B2F] p-5 shadow-2xl">
@@ -306,12 +353,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         </div>
       )}
       <div className="absolute top-4 left-4 z-10">
-        <button type="button" onClick={() => setIsDrawerOpen(!isDrawerOpen)} aria-expanded={isDrawerOpen} aria-controls="map-layer-options" className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-500 bg-[#07101F] px-3 text-sm font-semibold text-white shadow-lg hover:bg-[#12233B]">
+        <button onClick={() => setIsDrawerOpen(!isDrawerOpen)} aria-expanded={isDrawerOpen} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-[#07101F]/85 px-3 text-sm font-semibold text-white shadow-lg backdrop-blur-md hover:bg-[#12233B]">
           <SlidersHorizontal className="w-[18px] h-[18px] text-sky-400" /> Layers <ChevronDown className={`w-4 h-4 transition-transform ${isDrawerOpen ? 'rotate-180' : ''}`} />
         </button>
         {isDrawerOpen && (
-          <motion.div id="map-layer-options" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 w-64 rounded-2xl border border-slate-600 bg-[#07101F] p-3 shadow-xl">
-            <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">Map layers</p>
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 w-64 rounded-2xl border border-white/10 bg-[#07101F]/90 p-3 shadow-xl backdrop-blur-xl">
+            <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Map layers</p>
             {[
               ['Flood extent', showFlood, setShowFlood, Waves],
               ['River gauges', showGauges, setShowGauges, Radio],
@@ -319,13 +366,24 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               ['DEM 30m terrain', terrainEnabled, setTerrainEnabled, Mountain],
             ].map(([label, active, setActive, Icon]) => {
               const LayerIcon = Icon as React.ElementType;
-              return <button type="button" key={label as string} onClick={() => (setActive as React.Dispatch<React.SetStateAction<boolean>>)(!active)} aria-pressed={active as boolean} className="flex min-h-11 w-full items-center justify-between rounded-xl px-2 text-left text-sm text-slate-200 hover:bg-white/10"><span className="flex items-center gap-2"><LayerIcon className="w-4 h-4 text-sky-400" />{label as string}</span><span className={`h-5 w-9 rounded-full p-0.5 transition-colors ${active ? 'bg-sky-500' : 'bg-slate-700'}`}><span className={`block h-4 w-4 rounded-full bg-white transition-transform ${active ? 'translate-x-4' : ''}`} /></span></button>;
+              return <button key={label as string} onClick={() => (setActive as React.Dispatch<React.SetStateAction<boolean>>)(!active)} className="flex min-h-11 w-full items-center justify-between rounded-xl px-2 text-left text-sm text-slate-200 hover:bg-white/5"><span className="flex items-center gap-2"><LayerIcon className="w-4 h-4 text-sky-400" />{label as string}</span><span className={`h-5 w-9 rounded-full p-0.5 transition-colors ${active ? 'bg-sky-500' : 'bg-slate-700'}`}><span className={`block h-4 w-4 rounded-full bg-white transition-transform ${active ? 'translate-x-4' : ''}`} /></span></button>;
             })}
           </motion.div>
         )}
       </div>
 
-      <button type="button" onClick={onOpenDiagnostic} className="absolute bottom-4 right-20 z-10 hidden sm:flex min-h-11 items-center gap-2 rounded-xl border border-slate-600 bg-[#07101F] px-3 text-xs font-semibold text-white shadow-lg hover:bg-[#12233B]"><Eye className="w-4 h-4 text-sky-400" /> Details</button>
-    </section>
+      <div className="absolute top-4 right-4 z-10 rounded-xl border border-white/10 bg-[#07101F]/80 px-3 py-2 text-right text-xs text-slate-300 shadow-lg backdrop-blur-md">
+        <span className="block text-[10px] uppercase tracking-[0.1em] text-slate-400">Forecast</span><strong className="text-sky-300">{activeStep?.label || 'Now'}</strong>
+      </div>
+
+      <div className="absolute bottom-4 left-4 right-4 sm:right-auto z-10 max-w-[calc(100vw-32px)]">
+        <div className="flex max-w-full items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#07101F]/88 p-2 shadow-xl backdrop-blur-xl scrollbar-none touch-pan-x">
+          <button onClick={togglePlayback} className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-sky-600 px-3.5 text-xs font-semibold text-white hover:bg-sky-500 cursor-pointer">{isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}{isPlaying ? 'Pause' : 'Play'}</button>
+          {timelineSteps.map((hour) => <button key={hour} onClick={() => onForecastHourChange?.(hour)} className={`min-h-11 shrink-0 rounded-xl px-3.5 text-xs font-semibold transition-colors cursor-pointer ${forecastHour === hour ? 'bg-white text-[#07101F]' : 'text-slate-300 hover:bg-white/10'}`}>{hour === 0 ? 'Now' : `+${hour}h`}</button>)}
+        </div>
+      </div>
+
+      <button onClick={onOpenDiagnostic} className="absolute bottom-4 right-4 z-10 hidden sm:flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-[#07101F]/85 px-3.5 text-xs font-semibold text-white shadow-lg backdrop-blur-md hover:bg-[#12233B] cursor-pointer"><Eye className="w-4 h-4 text-sky-400" /> Details</button>
+    </div>
   );
 };
