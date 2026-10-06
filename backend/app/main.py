@@ -2,13 +2,14 @@ import asyncio
 from contextlib import asynccontextmanager
 import logging
 from typing import AsyncGenerator
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.config import settings
 from app.jobs.scheduler import (
     create_scheduler,
-    register_ingestion_job,
+    register_live_cycle_job,
     start_scheduler,
     stop_scheduler,
 )
@@ -21,6 +22,15 @@ logging.basicConfig(
 logger = logging.getLogger("flood_guard")
 
 
+async def runtime_error_handler(request: Request, exc: RuntimeError) -> JSONResponse:
+    """Convert RuntimeError (e.g., database not configured) to 503 response."""
+    logger.warning(f"RuntimeError: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database unavailable"},
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"Starting {settings.PROJECT_NAME} in '{settings.ENVIRONMENT}' mode...")
@@ -31,7 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.SCHEDULER_ENABLED:
         logger.info("SCHEDULER_ENABLED is True. Initializing background scheduler...")
         scheduler = create_scheduler()
-        register_ingestion_job(
+        register_live_cycle_job(
             scheduler,
             interval_minutes=settings.INGESTION_INTERVAL_MINUTES,
         )
@@ -61,6 +71,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Exception handler for database configuration errors
+app.add_exception_handler(RuntimeError, runtime_error_handler)
+
 # CORS Middleware configuration
 app.add_middleware(
     CORSMiddleware,
@@ -80,4 +93,3 @@ try:
     logger.info("Successfully mounted simulation & early-warning routes.")
 except Exception as exc:
     logger.warning(f"Could not mount simulation routes: {exc}")
-

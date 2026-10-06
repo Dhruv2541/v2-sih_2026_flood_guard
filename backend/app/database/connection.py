@@ -2,6 +2,7 @@ import logging
 from typing import Generator, Optional, Tuple
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import make_url, URL
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import settings
 
@@ -9,6 +10,57 @@ logger = logging.getLogger(__name__)
 
 engine: Optional[Engine] = None
 SessionLocal: Optional[sessionmaker[Session]] = None
+
+
+def _normalize_database_url(url: str) -> URL:
+    """Normalize database URL to use psycopg v3 driver.
+    
+    Normalizes:
+    - postgresql:// → postgresql+psycopg://
+    - postgres:// → postgresql+psycopg://
+    
+    Leaves unchanged:
+    - postgresql+psycopg:// (already correct)
+    - postgresql+psycopg2:// (explicit psycopg2, leave as-is)
+    - Other dialects (mysql, sqlite, etc.)
+    
+    Returns a SQLAlchemy URL object to preserve credentials (avoids str() masking password as ***).
+    """
+    try:
+        parsed = make_url(url)
+    except Exception:
+        # If URL parsing fails, return as-is and let create_engine handle the error
+        return url  # type: ignore[return-value]
+    
+    # Only normalize PostgreSQL URLs with default/no explicit driver
+    if parsed.drivername == "postgresql" or parsed.drivername == "postgres":
+        # Create new URL with psycopg driver, keep as URL object
+        return parsed.set(drivername="postgresql+psycopg")
+    
+    return parsed
+
+
+def _safe_log_url(url: str) -> str:
+    """Create a safe representation of a database URL for logging.
+    
+    Masks credentials while preserving useful metadata for debugging.
+    """
+    try:
+        parsed = make_url(url)
+        # Build safe representation: driver://[user@]host:port/database
+        parts = [parsed.drivername + "://"]
+        if parsed.username:
+            parts.append(f"{parsed.username}@")
+        if parsed.host:
+            parts.append(parsed.host)
+        if parsed.port:
+            parts.append(f":{parsed.port}")
+        if parsed.database:
+            parts.append(f"/{parsed.database}")
+        return "".join(parts)
+    except Exception:
+        # If parsing fails, return a generic placeholder
+        return "<unparseable URL>"
 
 
 def get_engine() -> Optional[Engine]:
@@ -27,15 +79,18 @@ def get_engine() -> Optional[Engine]:
         )
         return None
 
-    # Normalize postgresql:// or postgres:// to postgresql+psycopg2:// for psycopg2 compatibility
-    if url.startswith("postgresql://"):
-        url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
-    elif url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+    # Normalize URL to use psycopg v3 driver (returns SQLAlchemy URL object)
+    normalized_url = _normalize_database_url(url)
+    if isinstance(normalized_url, URL) and str(normalized_url) != url:
+        logger.info(
+            "Database driver normalized: %s -> %s",
+            _safe_log_url(url),
+            _safe_log_url(str(normalized_url))
+        )
 
     try:
         engine = create_engine(
-            url,
+            normalized_url,
             pool_pre_ping=True,
             echo=(settings.ENVIRONMENT == "development"),
         )

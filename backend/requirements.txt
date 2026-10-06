@@ -12,3 +12,5 @@ python-dotenv
 httpx
 joblib
 apscheduler
+pytest
+pytest-asyncio

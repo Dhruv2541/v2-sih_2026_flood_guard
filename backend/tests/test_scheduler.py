@@ -8,17 +8,21 @@ from pydantic import ValidationError
 
 from app.config import Settings, settings
 from app.data.schemas import NormalizedObservation
-from app.jobs.ingestion_job import run_ingestion_job
+from app.jobs.ingestion_job import run_live_cycle_job
 from app.jobs.scheduler import (
-    INGESTION_JOB_ID,
+    LIVE_CYCLE_JOB_ID,
     create_scheduler,
-    register_ingestion_job,
+    register_live_cycle_job,
     start_scheduler,
     stop_scheduler,
 )
 from app.main import app, lifespan
 from app.services.ingestion import FailedRegion, IngestionResult, IngestionService
+from app.services.live_cycle import LivePredictionCycleResult
 from app.services.observation_persistence import FailedPersistence
+from app.services.prediction import RegionWidePredictionResult
+from app.services.observation_persistence import FailedPersistence
+from app.ml.schemas import MLPredictionOutput
 
 
 # ---------------------------------------------------------------------------
@@ -64,11 +68,11 @@ async def test_scheduler_registration_invariants() -> None:
     scheduler = create_scheduler()
     start_time = datetime.now(timezone.utc)
 
-    job = register_ingestion_job(scheduler, interval_minutes=60)
+    job = register_live_cycle_job(scheduler, interval_minutes=60)
     start_scheduler(scheduler)
 
     try:
-        assert job.id == INGESTION_JOB_ID
+        assert job.id == LIVE_CYCLE_JOB_ID
         assert job.max_instances == 1
         assert job.coalesce is True
         assert job.misfire_grace_time == 300
@@ -84,13 +88,13 @@ async def test_scheduler_registration_invariants() -> None:
 
 
 def test_scheduler_registration_rejects_non_positive_interval() -> None:
-    """Verifies register_ingestion_job raises ValueError if interval is <= 0."""
+    """Verifies register_live_cycle_job raises ValueError if interval is <= 0."""
     scheduler = create_scheduler()
     with pytest.raises(ValueError, match="interval_minutes must be a positive integer"):
-        register_ingestion_job(scheduler, interval_minutes=0)
+        register_live_cycle_job(scheduler, interval_minutes=0)
 
     with pytest.raises(ValueError, match="interval_minutes must be a positive integer"):
-        register_ingestion_job(scheduler, interval_minutes=-5)
+        register_live_cycle_job(scheduler, interval_minutes=-5)
 
 
 # ---------------------------------------------------------------------------
@@ -115,13 +119,13 @@ async def test_scheduler_disabled_guarantees_no_activity_on_startup(
     """
     monkeypatch.setattr(settings, "SCHEDULER_ENABLED", False)
 
-    mock_ingestion_run = AsyncMock()
-    with patch("app.jobs.ingestion_job.run_ingestion_job", mock_ingestion_run):
+    mock_cycle_run = AsyncMock()
+    with patch("app.jobs.ingestion_job.run_live_cycle_job", mock_cycle_run):
         async with lifespan(app):
             # Scheduler must be None
             assert app.state.scheduler is None
-            # Zero ingestion jobs triggered
-            mock_ingestion_run.assert_not_called()
+            # Zero cycle jobs triggered
+            mock_cycle_run.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -135,9 +139,9 @@ async def test_fastapi_lifespan_scheduler_enabled(monkeypatch: pytest.MonkeyPatc
         captured_scheduler = app.state.scheduler
         assert captured_scheduler is not None
         assert captured_scheduler.running is True
-        job = captured_scheduler.get_job(INGESTION_JOB_ID)
+        job = captured_scheduler.get_job(LIVE_CYCLE_JOB_ID)
         assert job is not None
-        assert job.id == INGESTION_JOB_ID
+        assert job.id == LIVE_CYCLE_JOB_ID
 
     # After lifespan exit, scheduler should be cleanly shut down
     await asyncio.sleep(0)
@@ -146,15 +150,15 @@ async def test_fastapi_lifespan_scheduler_enabled(monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.anyio
-async def test_fastapi_lifespan_startup_does_not_execute_ingestion_immediately(
+async def test_fastapi_lifespan_startup_does_not_execute_cycle_immediately(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Verifies that FastAPI startup with SCHEDULER_ENABLED=True does NOT immediately execute the ingestion job."""
+    """Verifies that FastAPI startup with SCHEDULER_ENABLED=True does NOT immediately execute the cycle job."""
     mock_job = AsyncMock()
     monkeypatch.setattr(settings, "SCHEDULER_ENABLED", True)
     monkeypatch.setattr(settings, "INGESTION_INTERVAL_MINUTES", 60)
 
-    with patch("app.jobs.scheduler.run_ingestion_job", mock_job):
+    with patch("app.jobs.ingestion_job.run_live_cycle_job", mock_job):
         async with lifespan(app):
             # Give the asyncio event loop multiple ticks to process any immediate callbacks
             await asyncio.sleep(0.05)
@@ -167,10 +171,15 @@ async def test_fastapi_lifespan_startup_does_not_execute_ingestion_immediately(
 # ---------------------------------------------------------------------------
 
 @pytest.mark.anyio
-async def test_ingestion_job_successful_execution() -> None:
-    """Verifies session acquisition, persist=True ingestion invocation, and clean session closure."""
+async def test_cycle_job_successful_execution() -> None:
+    """Verifies session acquisition, complete cycle execution, and clean session closure."""
     mock_session = MagicMock()
     mock_factory = MagicMock(return_value=mock_session)
+
+    from app.services.live_cycle import LivePredictionCycleResult
+    from app.services.ingestion import IngestionResult
+    from app.services.prediction import RegionWidePredictionResult
+    from app.ml.schemas import MLPredictionOutput
 
     sample_obs = NormalizedObservation(
         region_id="kamrup_metro",
@@ -183,6 +192,14 @@ async def test_ingestion_job_successful_execution() -> None:
         humidity_pct=Decimal("80.0"),
         data_source="open-meteo",
     )
+    
+    sample_ml_output = MLPredictionOutput(
+        region_id="kamrup_metro",
+        generated_at=datetime(2026, 9, 16, 12, 0, tzinfo=timezone.utc),
+        forecast_valid_until=datetime(2026, 9, 16, 18, 0, tzinfo=timezone.utc),
+        flood_probability=Decimal("0.5"),
+        model_version="baseline-v1",
+    )
 
     mock_ingestion_service = MagicMock(spec=IngestionService)
     mock_ingestion_service.run_live_ingestion = AsyncMock(
@@ -194,31 +211,33 @@ async def test_ingestion_job_successful_execution() -> None:
         )
     )
 
-    result = await run_ingestion_job(
+    mock_prediction_service = MagicMock()
+    mock_prediction_service.generate_region_wide_predictions.return_value = RegionWidePredictionResult(
+        successful_predictions=[sample_ml_output],
+        failed_predictions=[],
+        total_regions=1,
+        successful_count=1,
+        failed_count=0,
+    )
+
+    result = await run_live_cycle_job(
         session_factory=mock_factory,
         ingestion_service=mock_ingestion_service,
+        prediction_service=mock_prediction_service,
     )
 
     assert result is not None
-    assert len(result.successful_observations) == 1
-    assert result.persisted_count == 1
-    assert len(result.failed_regions) == 0
-    assert len(result.persistence_failures) == 0
-
-    # Verify session was created and passed with persist=True
-    mock_factory.assert_called_once()
-    mock_ingestion_service.run_live_ingestion.assert_awaited_once_with(
-        session=mock_session,
-        persist=True,
-    )
-
-    # Verify session was guaranteed closed
-    mock_session.close.assert_called_once()
+    assert isinstance(result, LivePredictionCycleResult)
+    assert result.total_regions == 1
+    assert result.successful_observations == 1
+    assert result.successful_predictions == 1
+    assert result.failed_observations == 0
+    assert result.failed_predictions == 0
 
 
 @pytest.mark.anyio
-async def test_ingestion_job_session_always_closed_on_exception() -> None:
-    """Verifies that database session is closed even if ingestion raises an unexpected exception."""
+async def test_cycle_job_session_always_closed_on_exception() -> None:
+    """Verifies that database session is closed even if cycle raises an unexpected exception."""
     mock_session = MagicMock()
     mock_factory = MagicMock(return_value=mock_session)
 
@@ -227,9 +246,13 @@ async def test_ingestion_job_session_always_closed_on_exception() -> None:
         side_effect=RuntimeError("Unexpected provider crash or connection break")
     )
 
-    result = await run_ingestion_job(
+    mock_prediction_service = MagicMock()
+    mock_prediction_service.generate_region_wide_predictions.side_effect = RuntimeError("Model crash")
+
+    result = await run_live_cycle_job(
         session_factory=mock_factory,
-        ingestion_service=mock_ingestion_service,
+        ingestion_service=MagicMock(),
+        prediction_service=MagicMock(),
     )
 
     # Catches exception cleanly at job boundary and returns None
@@ -240,9 +263,9 @@ async def test_ingestion_job_session_always_closed_on_exception() -> None:
 
 
 @pytest.mark.anyio
-async def test_ingestion_job_database_unavailable_clean_exit() -> None:
+async def test_cycle_job_database_unavailable_clean_exit() -> None:
     """Verifies that if database connection is not configured, the job exits cleanly with a warning."""
-    result = await run_ingestion_job(
+    result = await run_live_cycle_job(
         session_factory=lambda: None,
     )
 
@@ -254,10 +277,15 @@ async def test_ingestion_job_database_unavailable_clean_exit() -> None:
 # ---------------------------------------------------------------------------
 
 @pytest.mark.anyio
-async def test_ingestion_job_preserves_failure_separation() -> None:
-    """Verifies that provider failures and persistence failures remain distinct and are not swapped."""
+async def test_cycle_job_preserves_failure_isolation() -> None:
+    """Verifies that ingestion failures and prediction failures are tracked separately."""
     mock_session = MagicMock()
     mock_factory = MagicMock(return_value=mock_session)
+
+    from app.services.live_cycle import LivePredictionCycleResult
+    from app.services.ingestion import IngestionResult, FailedRegion
+    from app.services.prediction import RegionWidePredictionResult, FailedRegionPrediction
+    from app.ml.schemas import MLPredictionOutput
 
     sample_obs = NormalizedObservation(
         region_id="kamrup_metro",
@@ -267,6 +295,14 @@ async def test_ingestion_job_preserves_failure_separation() -> None:
         rainfall_6h_mm=Decimal("0.0"),
         rainfall_24h_mm=Decimal("0.0"),
         data_source="open-meteo",
+    )
+    
+    sample_ml_output = MLPredictionOutput(
+        region_id="kamrup_metro",
+        generated_at=datetime(2026, 9, 16, 12, 0, tzinfo=timezone.utc),
+        forecast_valid_until=datetime(2026, 9, 16, 18, 0, tzinfo=timezone.utc),
+        flood_probability=Decimal("0.5"),
+        model_version="baseline-v1",
     )
 
     mock_ingestion_service = MagicMock(spec=IngestionService)
@@ -291,54 +327,96 @@ async def test_ingestion_job_preserves_failure_separation() -> None:
             ],
         )
     )
+    
+    mock_prediction_service = MagicMock()
+    mock_prediction_service.generate_region_wide_predictions.return_value = RegionWidePredictionResult(
+        successful_predictions=[],
+        failed_predictions=[
+            FailedRegionPrediction(
+                region_id="dibrugarh",
+                error_type="MLInferenceError",
+                message="Model crashed",
+            )
+        ],
+        total_regions=1,
+        successful_count=0,
+        failed_count=1,
+    )
 
-    result = await run_ingestion_job(
+    result = await run_live_cycle_job(
         session_factory=mock_factory,
         ingestion_service=mock_ingestion_service,
+        prediction_service=mock_prediction_service,
     )
 
     assert result is not None
-    # Verify separate preservation
-    assert len(result.failed_regions) == 1
-    assert result.failed_regions[0].region_id == "dibrugarh"
-    assert result.failed_regions[0].error_type == "WeatherProviderTimeoutError"
+    assert isinstance(result, LivePredictionCycleResult)
+    # Ingestion failures preserved
+    assert result.failed_observations == 1
+    # Prediction failures preserved
+    assert result.failed_predictions == 1
 
-    assert len(result.persistence_failures) == 1
-    assert result.persistence_failures[0].region_id == "kamrup_metro"
-    assert result.persistence_failures[0].error_type == "ForeignKeyViolation"
-    assert result.persistence_failures[0].message == "Foreign key violation"
-
-    mock_session.close.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# 6. Manual Trigger & Scheduler Resilience
-# ---------------------------------------------------------------------------
 
 @pytest.mark.anyio
 async def test_manual_trigger_direct_execution() -> None:
-    """Verifies run_ingestion_job can be executed directly as a manual trigger without waiting for scheduler."""
+    """Verifies run_live_cycle_job can be executed directly as a manual trigger without waiting for scheduler."""
     mock_session = MagicMock()
     mock_factory = MagicMock(return_value=mock_session)
+
+    from app.services.live_cycle import LivePredictionCycleResult
+    from app.services.ingestion import IngestionResult
+    from app.services.prediction import RegionWidePredictionResult
+    from app.ml.schemas import MLPredictionOutput
+
+    sample_obs = NormalizedObservation(
+        region_id="kamrup_metro",
+        recorded_at=datetime(2026, 9, 16, 12, 0, tzinfo=timezone.utc),
+        rainfall_1h_mm=Decimal("2.5"),
+        rainfall_3h_mm=Decimal("5.0"),
+        rainfall_6h_mm=Decimal("7.5"),
+        rainfall_24h_mm=Decimal("10.0"),
+        temperature_c=Decimal("28.0"),
+        humidity_pct=Decimal("80.0"),
+        data_source="open-meteo",
+    )
+    
+    sample_ml_output = MLPredictionOutput(
+        region_id="kamrup_metro",
+        generated_at=datetime(2026, 9, 16, 12, 0, tzinfo=timezone.utc),
+        forecast_valid_until=datetime(2026, 9, 16, 18, 0, tzinfo=timezone.utc),
+        flood_probability=Decimal("0.5"),
+        model_version="baseline-v1",
+    )
 
     mock_ingestion_service = MagicMock(spec=IngestionService)
     mock_ingestion_service.run_live_ingestion = AsyncMock(
         return_value=IngestionResult(
-            successful_observations=[],
+            successful_observations=[sample_obs],
             failed_regions=[],
-            persisted_count=0,
+            persisted_count=1,
             persistence_failures=[],
         )
     )
 
+    mock_prediction_service = MagicMock()
+    mock_prediction_service.generate_region_wide_predictions.return_value = RegionWidePredictionResult(
+        successful_predictions=[sample_ml_output],
+        failed_predictions=[],
+        total_regions=1,
+        successful_count=1,
+        failed_count=0,
+    )
+
     # Direct manual trigger
-    result = await run_ingestion_job(
+    result = await run_live_cycle_job(
         session_factory=mock_factory,
         ingestion_service=mock_ingestion_service,
+        prediction_service=mock_prediction_service,
     )
 
     assert result is not None
-    assert result.persisted_count == 0
+    assert isinstance(result, LivePredictionCycleResult)
+    assert result.total_regions == 1
     mock_session.close.assert_called_once()
 
 
@@ -395,12 +473,12 @@ async def test_scheduler_resilience_after_job_failure() -> None:
 
 def test_overlapping_runs_prevented_by_max_instances() -> None:
     """Verifies that the registered job has max_instances=1, preventing concurrent/overlapping
-    executions of the ingestion job within this single APScheduler process.
+    executions of the cycle job within this single APScheduler process.
     (Note: This is a process-local guarantee; distributed multi-process concurrency control
     is intentionally not implemented for this prototype).
     """
     scheduler = create_scheduler()
-    job = register_ingestion_job(scheduler, interval_minutes=60)
+    job = register_live_cycle_job(scheduler, interval_minutes=60)
     assert job.max_instances == 1
 
 

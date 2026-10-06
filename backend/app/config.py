@@ -1,7 +1,10 @@
-from typing import Union
+from typing import Literal, Union
 import json
-from pydantic import field_validator
+import logging
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger("flood_guard.config")
 
 
 class Settings(BaseSettings):
@@ -20,12 +23,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
     ]
-
-    # Prediction mode: "baseline" (demo) or "ml" (future)
-    PREDICTION_MODE: str = "baseline"
-
-    # Baseline model settings
-    BASELINE_MODEL_VERSION: str = "demo-baseline-v1"
+    PREDICTION_MODE: Literal["baseline", "ml"] = "baseline"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -66,10 +64,49 @@ class Settings(BaseSettings):
     @field_validator("PREDICTION_MODE")
     @classmethod
     def validate_prediction_mode(cls, v: str) -> str:
-        allowed = ["baseline", "ml"]
-        if v not in allowed:
-            raise ValueError(f"PREDICTION_MODE must be one of {allowed}")
+        """Validates prediction mode.
+        Only 'baseline' and 'ml' are accepted.
+        """
+        if v not in ("baseline", "ml"):
+            raise ValueError("PREDICTION_MODE must be 'baseline' or 'ml'.")
         return v
+
+    @model_validator(mode="after")
+    def validate_cors_for_production(self) -> "Settings":
+        """Validate CORS configuration for production environment.
+        
+        In production, CORS_ORIGINS must not contain only localhost/127.0.0.1 origins.
+        This prevents accidental deployment with development-only CORS settings.
+        """
+        if self.ENVIRONMENT == "production":
+            localhost_patterns = (
+                "localhost",
+                "127.0.0.1",
+                "0.0.0.0",
+                "[::1]",
+            )
+            
+            # Check if ALL origins are localhost patterns
+            non_localhost_origins = [
+                origin for origin in self.CORS_ORIGINS
+                if not any(pattern in origin for pattern in localhost_patterns)
+            ]
+            
+            if not non_localhost_origins and self.CORS_ORIGINS:
+                logger.warning(
+                    "PRODUCTION MISCONFIGURATION DETECTED: "
+                    "ENVIRONMENT=production but CORS_ORIGINS contains only localhost origins. "
+                    "The deployed frontend will be blocked by CORS. "
+                    "Set CORS_ORIGINS to include your production frontend URL (e.g., https://your-app.vercel.app)."
+                )
+            elif not self.CORS_ORIGINS:
+                logger.warning(
+                    "PRODUCTION MISCONFIGURATION DETECTED: "
+                    "ENVIRONMENT=production but CORS_ORIGINS is empty. "
+                    "All cross-origin requests will be blocked. "
+                    "Set CORS_ORIGINS to include your production frontend URL."
+                )
+        return self
 
 
 settings = Settings()
