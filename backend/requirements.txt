@@ -4,7 +4,6 @@ pandas
 numpy
 scikit-learn
 sqlalchemy
-psycopg2-binary
 psycopg[binary]
 pydantic
 pydantic-settings
@@ -12,3 +11,5 @@ python-dotenv
 httpx
 joblib
 apscheduler
+pytest
+pytest-asyncio
