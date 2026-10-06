@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 220" width="1200" height="220" role="img" aria-labelledby="features-title features-desc">
+  <title id="features-title">Assam Flood Guard — Core System Capabilities</title>
+  <desc id="features-desc">Four key modules: Geospatial Command HUD, Multi-Horizon Forecasting, Vulnerability &amp; Relief Shelters, and Interactive Scenario Simulator.</desc>
+
+  <defs>
+    <linearGradient id="feat-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050c18" />
+      <stop offset="100%" stop-color="#091526" />
+    </linearGradient>
+
+    <linearGradient id="card-inner-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0e1e36" />
+      <stop offset="100%" stop-color="#071120" />
+    </linearGradient>
+  </defs>
+
+  <!-- Container -->
+  <rect width="1200" height="220" rx="18" fill="url(#feat-bg)" stroke="#1a3254" stroke-width="1.2" />
+
+  <!-- 4 Feature Cards -->
+  <!-- 01: GEOSPATIAL COMMAND HUD -->
+  <g transform="translate(30, 24)">
+    <rect width="265" height="172" rx="12" fill="url(#card-inner-grad)" stroke="#1d385f" stroke-width="1" />
+    <circle cx="28" cy="28" r="14" fill="#0c2d48" stroke="#00d2ff" stroke-width="1.5" />
+    <text x="28" y="33" text-anchor="middle" fill="#38bdf8" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">01</text>
+    <text x="54" y="33" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700">Geospatial HUD</text>
+
+    <line x1="16" y1="52" x2="249" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">35 Assam Districts</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">Interactive Mapbox GL rendering</text>
+    <text x="16" y="116" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">with 180 dynamic micro-regions,</text>
+    <text x="16" y="134" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">gauge pins, and sector overlays.</text>
+
+    <text x="16" y="156" fill="#64748b" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11">Vector Polygons • Realtime</text>
+  </g>
+
+  <!-- 02: MULTI-HORIZON FORECASTING -->
+  <g transform="translate(315, 24)">
+    <rect width="265" height="172" rx="12" fill="url(#card-inner-grad)" stroke="#1d385f" stroke-width="1" />
+    <circle cx="28" cy="28" r="14" fill="#0c2d48" stroke="#00d2ff" stroke-width="1.5" />
+    <text x="28" y="33" text-anchor="middle" fill="#38bdf8" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">02</text>
+    <text x="54" y="33" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700">Multi-Horizon ML</text>
+
+    <line x1="16" y1="52" x2="249" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">~6h Live Predictions</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">Hydrological baseline with</text>
+    <text x="16" y="116" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">12h, 24h, 48h, and 72h weather</text>
+    <text x="16" y="134" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">trend projections and charts.</text>
+
+    <text x="16" y="156" fill="#64748b" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11">Recharts • Probability Gauges</text>
+  </g>
+
+  <!-- 03: VULNERABILITY & RELIEF -->
+  <g transform="translate(600, 24)">
+    <rect width="265" height="172" rx="12" fill="url(#card-inner-grad)" stroke="#1d385f" stroke-width="1" />
+    <circle cx="28" cy="28" r="14" fill="#0c2d48" stroke="#00d2ff" stroke-width="1.5" />
+    <text x="28" y="33" text-anchor="middle" fill="#38bdf8" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">03</text>
+    <text x="54" y="33" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700">Impact &amp; Relief</text>
+
+    <line x1="16" y1="52" x2="249" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">Shelter &amp; Infrastructure</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">Live population exposure indices,</text>
+    <text x="16" y="116" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">critical facility vulnerability maps,</text>
+    <text x="16" y="134" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">and geo-located relief shelters.</text>
+
+    <text x="16" y="156" fill="#64748b" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11">Emergency Sirens • Directives</text>
+  </g>
+
+  <!-- 04: SCENARIO SIMULATION -->
+  <g transform="translate(885, 24)">
+    <rect width="285" height="172" rx="12" fill="url(#card-inner-grad)" stroke="#1d385f" stroke-width="1" />
+    <circle cx="28" cy="28" r="14" fill="#0c2d48" stroke="#00d2ff" stroke-width="1.5" />
+    <text x="28" y="33" text-anchor="middle" fill="#38bdf8" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">04</text>
+    <text x="54" y="33" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700">Scenario Simulator</text>
+
+    <line x1="16" y1="52" x2="269" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">What-If Risk Modeling</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">Interactive parameter controls</text>
+    <text x="16" y="116" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">to simulate extreme monsoons,</text>
+    <text x="16" y="134" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12">dam releases, and flash floods.</text>
+
+    <text x="16" y="156" fill="#64748b" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11">Hydrological Stress Testing</text>
+  </g>
+</svg>

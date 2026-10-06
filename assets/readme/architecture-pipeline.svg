@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">Assam Flood Guard Architecture &amp; Data Pipeline</title>
+  <desc id="arch-desc">End-to-end data pipeline from 180 micro-region weather ingestion to risk classification and interactive frontend dashboard.</desc>
+
+  <defs>
+    <linearGradient id="arch-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050c18" />
+      <stop offset="100%" stop-color="#091526" />
+    </linearGradient>
+
+    <linearGradient id="stage-card-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0e1e36" />
+      <stop offset="100%" stop-color="#081222" />
+    </linearGradient>
+
+    <linearGradient id="arrow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00d2ff" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+
+    <filter id="node-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <marker id="cyan-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#00d2ff" />
+    </marker>
+  </defs>
+
+  <!-- Container -->
+  <rect width="1200" height="360" rx="20" fill="url(#arch-bg)" stroke="#1a3254" stroke-width="1.5" />
+
+  <!-- Top Title Strip -->
+  <g transform="translate(50, 36)">
+    <text x="0" y="0" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.3">
+      END-TO-END HYDROLOGICAL DATA PIPELINE
+    </text>
+    <text x="0" y="24" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14">
+      Automated sensor-to-action cycle operating across 180 canonical Assam sectors
+    </text>
+    <rect x="940" y="-18" width="160" height="28" rx="14" fill="#0a223d" stroke="#00d2ff" stroke-width="1" />
+    <circle cx="956" cy="-4" r="4" fill="#10b981" filter="url(#node-glow)" />
+    <text x="968" y="0" fill="#7dd3fc" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11" font-weight="700">60-MIN CYCLE</text>
+  </g>
+
+  <!-- 4 Stage Pipeline Cards -->
+  <!-- STAGE 1: INGESTION -->
+  <g transform="translate(50, 95)">
+    <rect width="240" height="215" rx="14" fill="url(#stage-card-grad)" stroke="#1e3a63" stroke-width="1.2" />
+    <rect x="16" y="16" width="30" height="24" rx="6" fill="#0369a1" />
+    <text x="31" y="32" text-anchor="middle" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">01</text>
+    <text x="56" y="33" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">Data Ingestion</text>
+
+    <line x1="16" y1="52" x2="224" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">Open-Meteo API</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">Rainfall 1h / 3h / 6h / 24h</text>
+
+    <text x="16" y="130" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">CWC River Gauges</text>
+    <text x="16" y="150" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">Water levels &amp; discharge</text>
+
+    <rect x="16" y="174" width="208" height="26" rx="6" fill="#071324" stroke="#132742" stroke-width="1" />
+    <text x="120" y="191" text-anchor="middle" fill="#7dd3fc" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11" font-weight="600">180 Micro-Regions</text>
+  </g>
+
+  <!-- Connector 1 -> 2 -->
+  <line x1="290" y1="202" x2="340" y2="202" stroke="#00d2ff" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#cyan-arrow)" />
+
+  <!-- STAGE 2: ORCHESTRATION & STORAGE -->
+  <g transform="translate(345, 95)">
+    <rect width="240" height="215" rx="14" fill="url(#stage-card-grad)" stroke="#1e3a63" stroke-width="1.2" />
+    <rect x="16" y="16" width="30" height="24" rx="6" fill="#0369a1" />
+    <text x="31" y="32" text-anchor="middle" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">02</text>
+    <text x="56" y="33" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">Orchestration</text>
+
+    <line x1="16" y1="52" x2="224" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">Live Cycle Service</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">APScheduler automated sync</text>
+
+    <text x="16" y="130" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">Supabase PostgreSQL</text>
+    <text x="16" y="150" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">Atomic UPSERTs &amp; pooling</text>
+
+    <rect x="16" y="174" width="208" height="26" rx="6" fill="#071324" stroke="#132742" stroke-width="1" />
+    <text x="120" y="191" text-anchor="middle" fill="#7dd3fc" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11" font-weight="600">SQLAlchemy 2.x + psycopg</text>
+  </g>
+
+  <!-- Connector 2 -> 3 -->
+  <line x1="585" y1="202" x2="635" y2="202" stroke="#00d2ff" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#cyan-arrow)" />
+
+  <!-- STAGE 3: HYDROLOGICAL INFERENCE -->
+  <g transform="translate(640, 95)">
+    <rect width="240" height="215" rx="14" fill="url(#stage-card-grad)" stroke="#1e3a63" stroke-width="1.2" />
+    <rect x="16" y="16" width="30" height="24" rx="6" fill="#0369a1" />
+    <text x="31" y="32" text-anchor="middle" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">03</text>
+    <text x="56" y="33" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">Risk Inference</text>
+
+    <line x1="16" y1="52" x2="224" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">Baseline Hydrology</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">Runoff &amp; gauge weighted</text>
+
+    <text x="16" y="130" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">Swappable ML Engine</text>
+    <text x="16" y="150" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">DI pattern for trained ONNX</text>
+
+    <rect x="16" y="174" width="208" height="26" rx="6" fill="#071324" stroke="#132742" stroke-width="1" />
+    <text x="120" y="191" text-anchor="middle" fill="#7dd3fc" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11" font-weight="600">~6h Probability Scoring</text>
+  </g>
+
+  <!-- Connector 3 -> 4 -->
+  <line x1="880" y1="202" x2="930" y2="202" stroke="#00d2ff" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#cyan-arrow)" />
+
+  <!-- STAGE 4: COMMAND INTERFACES -->
+  <g transform="translate(935, 95)">
+    <rect width="215" height="215" rx="14" fill="url(#stage-card-grad)" stroke="#1e3a63" stroke-width="1.2" />
+    <rect x="16" y="16" width="30" height="24" rx="6" fill="#0369a1" />
+    <text x="31" y="32" text-anchor="middle" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="700">04</text>
+    <text x="56" y="33" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">Command HUD</text>
+
+    <line x1="16" y1="52" x2="199" y2="52" stroke="#152842" stroke-width="1" />
+
+    <text x="16" y="78" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">FastAPI REST API</text>
+    <text x="16" y="98" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">Swagger &amp; ReDoc specs</text>
+
+    <text x="16" y="130" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">React 19 Dashboard</text>
+    <text x="16" y="150" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">Mapbox GL geospatial maps</text>
+
+    <rect x="16" y="174" width="183" height="26" rx="6" fill="#071324" stroke="#132742" stroke-width="1" />
+    <text x="107" y="191" text-anchor="middle" fill="#7dd3fc" font-family="ui-monospace, SFMono-Regular, monospace" font-size="11" font-weight="600">Alerts &amp; Evacuation</text>
+  </g>
+</svg>

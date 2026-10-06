@@ -1,44 +1,85 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*  # placeholder.py[cod]
-*  # placeholder$py.class
-*  # placeholder.so
-.Python
-env/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-/lib/
-/lib64/
 parts/
 sdist/
 var/
 wheels/
-*  # placeholder.egg-info/
+share/python-wheels/
+*.egg-info/
 .installed.cfg
-*  # placeholder.egg
-.venv
+*.egg
+
+# Virtual environments
+.venv/
 venv/
 ENV/
+env/
 
-# Frontend / Node
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+
+# Frontend dependencies & builds
 node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/dist-ssr/
 frontend/.vite/
+floodguard-frontend/node_modules/
+floodguard-frontend/dist/
+.vite/
+.next/
+out/
 *.bak
+
+# Agent skills & configs
+.agents/
+.claude/
+
+# Diagnostic reports & scratchpads (contains live DB credentials)
+diag_report.md
+start*.md
+
+# ML model artifacts & processed data
 data/raw/*
-
-# Environment variables
-.env
-.env.local
-
-# IDEs & System
-.vscode/
-.idea/
-.DS_Store
 data/processed/*
+models/
+*.joblib
